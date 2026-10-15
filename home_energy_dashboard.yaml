@@ -85,12 +85,10 @@ views:
             needle: false
 
           # TNB bill: this cycle (tier, rate, next step) + last cycle.
-          # Last cycle reads input_number.tnb_last_cycle_kwh (create it as a helper,
-          # set it on the 15th). If it's not set, that row shows "not set".
+          # Last cycle comes from the last_period attribute of sensor.monthly_grid_kwh_usage.
           - type: custom:config-template-card
             entities:
               - sensor.monthly_grid_kwh_usage
-              - input_number.tnb_last_cycle_kwh
             card:
               type: markdown
               content: |
@@ -126,7 +124,8 @@ views:
                 {% set band = (lo ~ '–' ~ hi ~ ' kWh') if inband else 'Above 600 kWh' %}
 
                 {# ---- Last cycle ---- #}
-                {% set lu = states('input_number.tnb_last_cycle_kwh') | float(0) %}
+                {% set lp = state_attr('sensor.monthly_grid_kwh_usage', 'last_period') %}
+                {% set lu = lp | float(0) %}
                 {% set ln = namespace(i=-1) %}
                 {% for b in blocks %}{% if ln.i == -1 and lu <= b.max %}{% set ln.i = loop.index0 %}{% endif %}{% endfor %}
                 {% set lbill = lu * (base + (blocks[ln.i].disc if ln.i >= 0 else 0) / 100) %}
@@ -143,41 +142,8 @@ views:
                 | 🏷️ **Rate** | {{ '%.2f' | format(rate * 100) }} sen/kWh |
                 | ⏭️ **Next step** | {% if inband %}{{ '%.2f' | format(hi - u) }} kWh to {{ hi }} kWh{% else %}—{% endif %} |
                 | ⚠️ **Crossing it adds** | {% if inband %}≈ RM {{ '%.2f' | format(jump) }}{% else %}—{% endif %} |
-                | 🗓️ **Last cycle** | {% if has_value('input_number.tnb_last_cycle_kwh') %}{{ '%.2f' | format(lu) }} kWh · RM {{ '%.2f' | format(lbill) }}{% else %}not set{% endif %} |
+                | 🗓️ **Last cycle** | {% if lp is not none %}{{ '%.2f' | format(lu) }} kWh · RM {{ '%.2f' | format(lbill) }}{% else %}not set{% endif %} |
 
-          # Quick calculator: type any kWh, get the bill (same tier rules)
-          - type: entities
-            title: ⚡ Quick Bill Calculator
-            entities:
-              - entity: input_number.kwh_calc_checker
-                name: Enter kWh
-          - type: custom:config-template-card
-            entities:
-              - input_number.kwh_calc_checker
-            card:
-              type: markdown
-              content: |
-                {% set usage = states('input_number.kwh_calc_checker') | float(0) %}
-                {% set base = 0.2703 + 0.0455 + 0.1285 %}
-                {% set blocks = [
-                  {'max': 200, 'disc': -25.0},
-                  {'max': 250, 'disc': -24.5},
-                  {'max': 300, 'disc': -22.5},
-                  {'max': 350, 'disc': -21.0},
-                  {'max': 400, 'disc': -17.0},
-                  {'max': 450, 'disc': -14.5},
-                  {'max': 500, 'disc': -12.0},
-                  {'max': 550, 'disc': -10.5},
-                  {'max': 600, 'disc': -9.0}
-                ] %}
-                {% set ns = namespace(disc=0, found=false) %}
-                {% for b in blocks %}{% if not ns.found and usage <= b.max %}{% set ns.disc = b.disc %}{% set ns.found = true %}{% endif %}{% endfor %}
-                {% set rate = base + ns.disc / 100 %}
-                {% set total = usage * rate %}
-
-                ## 💰 RM {{ '%.2f' | format(total) }}
-
-                **{{ '%.2f' | format(usage) }} kWh** · {{ '%.2f' | format(rate * 100) }} sen/kWh
 
       # ── 2. TOP CONSUMERS (auto-sorted, live) ──────────────────────────────
       - type: grid
@@ -699,7 +665,6 @@ views:
                   {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
                 tap_action:
                   action: more-info
-
   # ═══════════════════════════════════════════════════════════════════════════
   # VIEW 2 — USAGE (history, uses HA's built-in energy cards)
   # ═══════════════════════════════════════════════════════════════════════════
