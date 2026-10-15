@@ -84,7 +84,100 @@ views:
             max: 600
             needle: false
 
-          # >>> Paste your existing TNB bill-estimate card here (the config-template-card one). <<<
+          # TNB bill: this cycle (tier, rate, next step) + last cycle.
+          # Last cycle reads input_number.tnb_last_cycle_kwh (create it as a helper,
+          # set it on the 15th). If it's not set, that row shows "not set".
+          - type: custom:config-template-card
+            entities:
+              - sensor.monthly_grid_kwh_usage
+              - input_number.tnb_last_cycle_kwh
+            card:
+              type: markdown
+              content: |
+                {% set base = 0.2703 + 0.0455 + 0.1285 %}
+                {% set blocks = [
+                  {'max': 200, 'disc': -25.0},
+                  {'max': 250, 'disc': -24.5},
+                  {'max': 300, 'disc': -22.5},
+                  {'max': 350, 'disc': -21.0},
+                  {'max': 400, 'disc': -17.0},
+                  {'max': 450, 'disc': -14.5},
+                  {'max': 500, 'disc': -12.0},
+                  {'max': 550, 'disc': -10.5},
+                  {'max': 600, 'disc': -9.0}
+                ] %}
+
+                {# ---- This cycle ---- #}
+                {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
+                {% set ns = namespace(i=-1) %}
+                {% for b in blocks %}{% if ns.i == -1 and u <= b.max %}{% set ns.i = loop.index0 %}{% endif %}{% endfor %}
+                {% set inband = ns.i >= 0 %}
+                {% set disc = blocks[ns.i].disc if inband else 0 %}
+                {% set rate = base + disc / 100 %}
+                {% set bill = u * rate %}
+                {% set pe = blocks[ns.i - 1].max if ns.i > 0 else 0 %}
+                {% set hi = blocks[ns.i].max if inband else 0 %}
+                {% set lo = (pe + 1) if ns.i > 0 else 0 %}
+                {% set pct = ((u - pe) / (hi - pe) * 100) if inband else 100 %}
+                {% set filled = (pct / 10) | round(0) | int %}
+                {% set bar = ('▰' * filled) ~ ('▱' * (10 - filled)) %}
+                {% set nd = blocks[ns.i + 1].disc if (inband and ns.i + 1 < blocks | length) else 0 %}
+                {% set jump = hi * (nd - disc) / 100 %}
+                {% set band = (lo ~ '–' ~ hi ~ ' kWh') if inband else 'Above 600 kWh' %}
+
+                {# ---- Last cycle ---- #}
+                {% set lu = states('input_number.tnb_last_cycle_kwh') | float(0) %}
+                {% set ln = namespace(i=-1) %}
+                {% for b in blocks %}{% if ln.i == -1 and lu <= b.max %}{% set ln.i = loop.index0 %}{% endif %}{% endfor %}
+                {% set lbill = lu * (base + (blocks[ln.i].disc if ln.i >= 0 else 0) / 100) %}
+
+                ## ⚡ TNB electricity
+
+                **This cycle · RM {{ '%.2f' | format(bill) }}**
+
+                {{ bar }} **{{ '%.2f' | format(u) }} kWh**
+
+                | | |
+                |:--|:--|
+                | 🧱 **Tier** | {{ band }} |
+                | 🏷️ **Rate** | {{ '%.2f' | format(rate * 100) }} sen/kWh |
+                | ⏭️ **Next step** | {% if inband %}{{ '%.2f' | format(hi - u) }} kWh to {{ hi }} kWh{% else %}—{% endif %} |
+                | ⚠️ **Crossing it adds** | {% if inband %}≈ RM {{ '%.2f' | format(jump) }}{% else %}—{% endif %} |
+                | 🗓️ **Last cycle** | {% if has_value('input_number.tnb_last_cycle_kwh') %}{{ '%.2f' | format(lu) }} kWh · RM {{ '%.2f' | format(lbill) }}{% else %}not set{% endif %} |
+
+          # Quick calculator: type any kWh, get the bill (same tier rules)
+          - type: entities
+            title: ⚡ Quick Bill Calculator
+            entities:
+              - entity: input_number.kwh_calc_checker
+                name: Enter kWh
+          - type: custom:config-template-card
+            entities:
+              - input_number.kwh_calc_checker
+            card:
+              type: markdown
+              content: |
+                {% set usage = states('input_number.kwh_calc_checker') | float(0) %}
+                {% set base = 0.2703 + 0.0455 + 0.1285 %}
+                {% set blocks = [
+                  {'max': 200, 'disc': -25.0},
+                  {'max': 250, 'disc': -24.5},
+                  {'max': 300, 'disc': -22.5},
+                  {'max': 350, 'disc': -21.0},
+                  {'max': 400, 'disc': -17.0},
+                  {'max': 450, 'disc': -14.5},
+                  {'max': 500, 'disc': -12.0},
+                  {'max': 550, 'disc': -10.5},
+                  {'max': 600, 'disc': -9.0}
+                ] %}
+                {% set ns = namespace(disc=0, found=false) %}
+                {% for b in blocks %}{% if not ns.found and usage <= b.max %}{% set ns.disc = b.disc %}{% set ns.found = true %}{% endif %}{% endfor %}
+                {% set rate = base + ns.disc / 100 %}
+                {% set total = usage * rate %}
+
+                ## 💰 RM {{ '%.2f' | format(total) }}
+
+                **{{ '%.2f' | format(usage) }} kWh** · {{ '%.2f' | format(rate * 100) }} sen/kWh
 
       # ── 2. TOP CONSUMERS (auto-sorted, live) ──────────────────────────────
       - type: grid
