@@ -76,74 +76,77 @@ views:
               average: true
               labels: false
 
-          # Bill cycle (15th–14th). Assumes sensor.monthly_grid_kwh_usage resets on the 15th.
-          - type: gauge
-            entity: sensor.monthly_grid_kwh_usage
-            name: This bill cycle (kWh)
-            min: 0
-            max: 600
-            needle: false
-
-          # TNB bill: this cycle (tier, rate, next step) + last cycle.
+          # ── TNB electricity: this bill cycle (15th–14th) + last cycle ─────
           # Last cycle comes from the last_period attribute of sensor.monthly_grid_kwh_usage.
-          - type: custom:config-template-card
-            entities:
-              - sensor.monthly_grid_kwh_usage
-            card:
-              type: markdown
-              content: |
-                {% set base = 0.2703 + 0.0455 + 0.1285 %}
-                {% set blocks = [
-                  {'max': 200, 'disc': -25.0},
-                  {'max': 250, 'disc': -24.5},
-                  {'max': 300, 'disc': -22.5},
-                  {'max': 350, 'disc': -21.0},
-                  {'max': 400, 'disc': -17.0},
-                  {'max': 450, 'disc': -14.5},
-                  {'max': 500, 'disc': -12.0},
-                  {'max': 550, 'disc': -10.5},
-                  {'max': 600, 'disc': -9.0}
-                ] %}
-
-                {# ---- This cycle ---- #}
-                {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
-                {% set ns = namespace(i=-1) %}
-                {% for b in blocks %}{% if ns.i == -1 and u <= b.max %}{% set ns.i = loop.index0 %}{% endif %}{% endfor %}
-                {% set inband = ns.i >= 0 %}
-                {% set disc = blocks[ns.i].disc if inband else 0 %}
-                {% set rate = base + disc / 100 %}
-                {% set bill = u * rate %}
-                {% set pe = blocks[ns.i - 1].max if ns.i > 0 else 0 %}
-                {% set hi = blocks[ns.i].max if inband else 0 %}
-                {% set lo = (pe + 1) if ns.i > 0 else 0 %}
-                {% set pct = ((u - pe) / (hi - pe) * 100) if inband else 100 %}
-                {% set filled = (pct / 10) | round(0) | int %}
-                {% set bar = ('▰' * filled) ~ ('▱' * (10 - filled)) %}
-                {% set nd = blocks[ns.i + 1].disc if (inband and ns.i + 1 < blocks | length) else 0 %}
-                {% set jump = hi * (nd - disc) / 100 %}
-                {% set band = (lo ~ '–' ~ hi ~ ' kWh') if inband else 'Above 600 kWh' %}
-
-                {# ---- Last cycle ---- #}
-                {% set lp = state_attr('sensor.monthly_grid_kwh_usage', 'last_period') %}
-                {% set lu = lp | float(0) %}
-                {% set ln = namespace(i=-1) %}
-                {% for b in blocks %}{% if ln.i == -1 and lu <= b.max %}{% set ln.i = loop.index0 %}{% endif %}{% endfor %}
-                {% set lbill = lu * (base + (blocks[ln.i].disc if ln.i >= 0 else 0) / 100) %}
-
-                ## ⚡ TNB electricity
-
-                **This cycle · RM {{ '%.2f' | format(bill) }}**
-
-                {{ bar }} **{{ '%.2f' | format(u) }} kWh**
-
-                | | |
-                |:--|:--|
-                | 🧱 **Tier** | {{ band }} |
-                | 🏷️ **Rate** | {{ '%.2f' | format(rate * 100) }} sen/kWh |
-                | ⏭️ **Next step** | {% if inband %}{{ '%.2f' | format(hi - u) }} kWh to {{ hi }} kWh{% else %}—{% endif %} |
-                | ⚠️ **Crossing it adds** | {% if inband %}≈ RM {{ '%.2f' | format(jump) }}{% else %}—{% endif %} |
-                | 🗓️ **Last cycle** | {% if lp is not none %}{{ '%.2f' | format(lu) }} kWh · RM {{ '%.2f' | format(lbill) }}{% else %}not set{% endif %} |
-
+          - type: custom:mushroom-title-card
+            title: TNB electricity
+            subtitle: >-
+              {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t = blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max if t is defined else 0 %}{% set disc = t.disc if t is defined else 0 %} {% set pe = ((blocks | selectattr('max', 'lt', hi) | map(attribute='max') | list) + [0]) | max %}{% set lo = pe + 1 if pe > 0 else 0 %}
+              {% if hi %}{{ ((u - pe) / (hi - pe) * 100) | round(0) | int }}% through the {{ lo }}–{{ hi }} kWh tier{% else %}Above all tiers · no discount{% endif %}
+          - type: custom:mushroom-template-card
+            entity: sensor.monthly_grid_kwh_usage
+            layout: horizontal
+            fill_container: true
+            tap_action:
+              action: more-info
+            primary: >-
+              {% set base = 0.2703 + 0.0455 + 0.1285 %} {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t = blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max if t is defined else 0 %}{% set disc = t.disc if t is defined else 0 %}
+              RM {{ '%.2f' | format(u * (base + disc / 100)) }}
+            secondary: >-
+              {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {{ '%.2f' | format(u) }} kWh this cycle
+            icon: mdi:flash
+            icon_color: >-
+              {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {{ 'green' if u <= 200 else ('amber' if u <= 400 else 'red') }}
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                layout: vertical
+                fill_container: true
+                primary: >-
+                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t = blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max if t is defined else 0 %}{% set disc = t.disc if t is defined else 0 %} {% set pe = ((blocks | selectattr('max', 'lt', hi) | map(attribute='max') | list) + [0]) | max %}{% set lo = pe + 1 if pe > 0 else 0 %}
+                  {% if hi %}{{ lo }}–{{ hi }} kWh{% else %}600+ kWh{% endif %}
+                secondary: >-
+                  {% set base = 0.2703 + 0.0455 + 0.1285 %} {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t = blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max if t is defined else 0 %}{% set disc = t.disc if t is defined else 0 %}
+                  {{ '%.2f' | format((base + disc / 100) * 100) }} sen/kWh
+                icon: mdi:layers-outline
+                icon_color: >-
+                  {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {{ 'green' if u <= 200 else ('amber' if u <= 400 else 'red') }}
+              - type: custom:mushroom-template-card
+                layout: vertical
+                fill_container: true
+                primary: >-
+                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t = blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max if t is defined else 0 %}{% set disc = t.disc if t is defined else 0 %}
+                  {% if hi %}{{ '%.1f' | format(hi - u) }} kWh{% else %}Top tier{% endif %}
+                secondary: >-
+                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t = blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max if t is defined else 0 %}{% set disc = t.disc if t is defined else 0 %}
+                  {% if hi %}left before {{ hi }} kWh{% else %}no discount left{% endif %}
+                icon: mdi:arrow-right-circle-outline
+                icon_color: blue
+              - type: custom:mushroom-template-card
+                layout: vertical
+                fill_container: true
+                primary: >-
+                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t = blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max if t is defined else 0 %}{% set disc = t.disc if t is defined else 0 %} {% set nx = blocks | selectattr('max', 'gt', hi) | first %}{% set nd = nx.disc if nx is defined else 0 %}
+                  {% if hi %}+RM {{ '%.2f' | format(hi * (nd - disc) / 100) }}{% else %}—{% endif %}
+                secondary: >-
+                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t = blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max if t is defined else 0 %}{% set disc = t.disc if t is defined else 0 %}
+                  {% if hi %}if you pass {{ hi }} kWh{% else %}no more steps{% endif %}
+                icon: mdi:alert-outline
+                icon_color: >-
+                  {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {{ 'amber' if u <= 600 else 'disabled' }}
+              - type: custom:mushroom-template-card
+                layout: vertical
+                fill_container: true
+                primary: >-
+                  {% set base = 0.2703 + 0.0455 + 0.1285 %} {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set lp = state_attr('sensor.monthly_grid_kwh_usage', 'last_period') %}{% set lu = lp | float(0) %}{% set lt = blocks | selectattr('max', 'ge', lu) | first %}{% set ld = lt.disc if lt is defined else 0 %}
+                  {% if lp is not none %}RM {{ '%.2f' | format(lu * (base + ld / 100)) }}{% else %}—{% endif %}
+                secondary: >-
+                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set lp = state_attr('sensor.monthly_grid_kwh_usage', 'last_period') %}{% set lu = lp | float(0) %}{% set lt = blocks | selectattr('max', 'ge', lu) | first %}{% set ld = lt.disc if lt is defined else 0 %}
+                  {% if lp is not none %}last cycle · {{ '%.2f' | format(lu) }} kWh{% else %}last cycle not found{% endif %}
+                icon: mdi:calendar-month-outline
+                icon_color: disabled
 
       # ── 2. TOP CONSUMERS (auto-sorted, live) ──────────────────────────────
       - type: grid
@@ -665,6 +668,7 @@ views:
                   {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
                 tap_action:
                   action: more-info
+
   # ═══════════════════════════════════════════════════════════════════════════
   # VIEW 2 — USAGE (history, uses HA's built-in energy cards)
   # ═══════════════════════════════════════════════════════════════════════════
