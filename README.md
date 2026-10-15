@@ -3,7 +3,7 @@
 A clean, modern **Sections View** dashboard for Home Assistant focused heavily on **real-time power monitoring**, **device breakdowns**, and **Malaysia TNB (Tenaga Nasional Berhad) electricity tariff and tier calculations**.
 
 ![Dashboard Preview](snapshot/dashboard.png)
-
+![Dashboard Preview2](snapshot/dashboardpg2.png)
 ---
 
 ## ✨ Features
