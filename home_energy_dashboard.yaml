@@ -1,0 +1,698 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Home Energy dashboard  (Sections view, latest HA)
+# Install: Settings → Dashboards → Add dashboard → open it → ⋮ → Edit → ⋮ →
+#          Raw configuration editor → paste this whole file → Save.
+#
+# Needs these HACS frontend cards:
+#   Mushroom, mini-graph-card, auto-entities, apexcharts-card
+# (no card-mod needed)
+#
+# Colour rule used everywhere:  grey = idle · green = low · amber = medium · red = high
+# ─────────────────────────────────────────────────────────────────────────────
+title: Home Energy
+views:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # VIEW 1 — POWER (live)
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: Power
+    path: power
+    icon: mdi:flash
+    type: sections
+    max_columns: 3
+    sections:
+      # ── 1. RIGHT NOW ──────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Right now
+            heading_style: title
+            icon: mdi:flash
+
+          # Status chips: only show something when it's true
+          - type: custom:mushroom-chips-card
+            alignment: start
+            chips:
+              - type: template
+                icon: mdi:air-conditioner
+                icon_color: blue
+                content: >-
+                  {{ states.climate | rejectattr('state','in',['off','unavailable','unknown']) | list | length }} aircond on
+              - type: template
+                icon: >-
+                  {{ 'mdi:water-boiler' if states('sensor.water_heater_epower')|float(0) > 0 else '' }}
+                icon_color: red
+                content: >-
+                  {{ 'Water heater' if states('sensor.water_heater_epower')|float(0) > 0 else '' }}
+              - type: template
+                icon: >-
+                  {{ 'mdi:microwave' if states('sensor.microwave_epower')|float(0) > 0 else '' }}
+                icon_color: amber
+                content: >-
+                  {{ 'Microwave' if states('sensor.microwave_epower')|float(0) > 0 else '' }}
+
+          # Hero: whole-house watts + 24h sparkline, colour changes with load
+          - type: custom:mini-graph-card
+            name: Whole house
+            icon: mdi:home-lightning-bolt
+            entities:
+              - entity: sensor.energy_meter_main_ct_power
+            hours_to_show: 24
+            points_per_hour: 4
+            line_width: 3
+            font_size: 70
+            animate: true
+            smoothing: true
+            color_thresholds:
+              - value: 0
+                color: "#4ade80"
+              - value: 600
+                color: "#fbbf24"
+              - value: 1500
+                color: "#f87171"
+            show:
+              fill: fade
+              points: false
+              extrema: true
+              average: true
+              labels: false
+
+          # Bill cycle (15th–14th). Assumes sensor.monthly_grid_kwh_usage resets on the 15th.
+          - type: gauge
+            entity: sensor.monthly_grid_kwh_usage
+            name: This bill cycle (kWh)
+            min: 0
+            max: 600
+            needle: false
+
+          # >>> Paste your existing TNB bill-estimate card here (the config-template-card one). <<<
+
+      # ── 2. TOP CONSUMERS (auto-sorted, live) ──────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Top consumers
+            heading_style: title
+            icon: mdi:podium
+          - type: custom:auto-entities
+            show_empty: true
+            card:
+              type: grid
+              columns: 1
+              square: false
+            card_param: cards
+            sort:
+              method: state
+              numeric: true
+              reverse: true
+              count: 8
+            filter:
+              include:
+                # Every power sensor in the house...
+                - domain: sensor
+                  attributes:
+                    device_class: power
+                  options: &row
+                    type: custom:mushroom-template-card
+                    fill_container: true
+                    tap_action:
+                      action: more-info
+                    primary: >-
+                      {% set n = {
+                        'sensor.fridge_fridge_power': 'Refrigerator',
+                        'sensor.hisense_tugs_power': 'Hisense Aircond',
+                        'sensor.midea_celest_power': 'Midea Celest',
+                        'sensor.midea_all_easy_pro_power': 'Midea AEP',
+                        'sensor.celest_bedroom_3_power': 'Midea Celest B3',
+                        'sensor.coway_coway_power': 'Coway',
+                        'sensor.light_fan_light_fan_power': 'Bed2 · Lights & Fan',
+                        'sensor.living_room_tapo_home_server_power': 'Server',
+                        'sensor.tapo_computer_plug_power_1': 'Computer',
+                        'sensor.tapo_tv_plug_power_1': 'Bedroom TV',
+                        'sensor.living_room_tapo_main_tv_power': 'Sharp TV',
+                        'sensor.entertainment_power': 'Media, Router & Ext.',
+                        'sensor.water_heater_epower': 'Water Heater',
+                        'sensor.microwave_epower': 'Microwave',
+                        'sensor.washer_dryer_power': 'Washer Dryer',
+                        'sensor.kitchen_air_fryer_power': 'Air Fryer',
+                        'sensor.elba_hood_power': 'Elba Hood',
+                        'sensor.kitchen_rice_cooker_power': 'Rice Cooker',
+                        'sensor.living_room_game_console_power': 'PS5',
+                        'input_number.lights_watt_baseline': 'Lights & Fans (est.)'
+                      } %}
+                      {{ n.get(entity, state_attr(entity, 'friendly_name')) }}
+                    secondary: >-
+                      {{ states(entity) | float(0) | round(0) | int }} W
+                    icon: >-
+                      {% set i = {
+                        'sensor.fridge_fridge_power': 'mdi:fridge',
+                        'sensor.hisense_tugs_power': 'mdi:air-conditioner',
+                        'sensor.midea_celest_power': 'mdi:air-conditioner',
+                        'sensor.midea_all_easy_pro_power': 'mdi:air-conditioner',
+                        'sensor.celest_bedroom_3_power': 'mdi:air-conditioner',
+                        'sensor.coway_coway_power': 'mdi:air-purifier',
+                        'sensor.light_fan_light_fan_power': 'mdi:ceiling-fan-light',
+                        'sensor.living_room_tapo_home_server_power': 'mdi:server',
+                        'sensor.tapo_computer_plug_power_1': 'mdi:desktop-tower-monitor',
+                        'sensor.tapo_tv_plug_power_1': 'mdi:television',
+                        'sensor.living_room_tapo_main_tv_power': 'mdi:television',
+                        'sensor.entertainment_power': 'mdi:router-wireless',
+                        'sensor.water_heater_epower': 'mdi:water-boiler',
+                        'sensor.microwave_epower': 'mdi:microwave',
+                        'sensor.washer_dryer_power': 'mdi:washing-machine',
+                        'sensor.kitchen_air_fryer_power': 'mdi:air-fryer',
+                        'sensor.elba_hood_power': 'mdi:range-hood',
+                        'sensor.kitchen_rice_cooker_power': 'mdi:rice',
+                        'sensor.living_room_game_console_power': 'mdi:sony-playstation',
+                        'input_number.lights_watt_baseline': 'mdi:lightbulb-group'
+                      } %}
+                      {{ i.get(entity, 'mdi:flash') }}
+                    icon_color: >-
+                      {% set w = states(entity) | float(0) %}
+                      {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                # ...plus your estimated lights & fans (CT B baseline helper)
+                - entity_id: input_number.lights_watt_baseline
+                  options: *row
+              exclude:
+                # Meters / helpers that aren't devices
+                - entity_id: sensor.energy_meter_main_ct_power
+                - entity_id: sensor.energy_meter_lights_ctb_power
+                - entity_id: sensor.shelly_ct_b_remaining_power
+                - entity_id: sensor.shelly_ct_b_snapshot
+                # Duplicate of Midea Celest (living room)
+                - entity_id: sensor.150633094438435_realtime_power
+                - state: unavailable
+                - state: unknown
+                - state: "< 1"
+            else:
+              type: markdown
+              content: Everything is idle 🌙
+
+      # ── 3. AIRCOND (live watts + full control) ────────────────────────────
+      - type: grid
+        cards:
+          - type: heading
+            heading: Aircond
+            heading_style: title
+            icon: mdi:snowflake
+
+          # Bedroom 2 · Hisense
+          - type: vertical-stack
+            cards:
+              - type: custom:mini-graph-card
+                name: Bedroom 2 · Hisense
+                icon: mdi:air-conditioner
+                entities:
+                  - entity: sensor.hisense_tugs_power
+                hours_to_show: 12
+                points_per_hour: 4
+                line_width: 2
+                font_size: 60
+                smoothing: true
+                color_thresholds:
+                  - value: 0
+                    color: "#4ade80"
+                  - value: 400
+                    color: "#fbbf24"
+                  - value: 900
+                    color: "#f87171"
+                show:
+                  fill: fade
+                  points: false
+                  legend: false
+                  labels: false
+              - type: custom:mushroom-climate-card
+                entity: climate.ai10tugs
+                name: Hisense
+                show_temperature_control: true
+                collapsible_controls: true
+                hvac_modes: [off, cool, dry, fan_only, auto]
+              - type: custom:mushroom-chips-card
+                alignment: center
+                chips:
+                  - type: template
+                    entity: switch.ai10tugs_quiet_mode
+                    icon: mdi:volume-off
+                    content: Quiet
+                    icon_color: >-
+                      {{ 'blue' if is_state(entity, 'on') else 'disabled' }}
+                    tap_action:
+                      action: toggle
+                  - type: template
+                    entity: switch.ai10tugs_fast_heating_cooling
+                    icon: mdi:rocket-launch
+                    content: Fast cool
+                    icon_color: >-
+                      {{ 'blue' if is_state(entity, 'on') else 'disabled' }}
+                    tap_action:
+                      action: toggle
+
+          # Living room · Midea Celest 2HP
+          - type: vertical-stack
+            cards:
+              - type: custom:mini-graph-card
+                name: Living room · Celest 2HP
+                icon: mdi:air-conditioner
+                entities:
+                  - entity: sensor.midea_celest_power
+                hours_to_show: 12
+                points_per_hour: 4
+                line_width: 2
+                font_size: 60
+                smoothing: true
+                color_thresholds:
+                  - value: 0
+                    color: "#4ade80"
+                  - value: 400
+                    color: "#fbbf24"
+                  - value: 900
+                    color: "#f87171"
+                show:
+                  fill: fade
+                  points: false
+                  legend: false
+                  labels: false
+              - type: custom:mushroom-climate-card
+                entity: climate.150633094438435_climate
+                name: Celest 2HP
+                show_temperature_control: true
+                collapsible_controls: true
+                hvac_modes: [off, cool, dry, fan_only, auto]
+
+          # Bedroom · Midea All Easy Pro 1HP
+          - type: vertical-stack
+            cards:
+              - type: custom:mini-graph-card
+                name: Bedroom · All Easy Pro 1HP
+                icon: mdi:air-conditioner
+                entities:
+                  - entity: sensor.midea_all_easy_pro_power
+                hours_to_show: 12
+                points_per_hour: 4
+                line_width: 2
+                font_size: 60
+                smoothing: true
+                color_thresholds:
+                  - value: 0
+                    color: "#4ade80"
+                  - value: 400
+                    color: "#fbbf24"
+                  - value: 900
+                    color: "#f87171"
+                show:
+                  fill: fade
+                  points: false
+                  legend: false
+                  labels: false
+              - type: custom:mushroom-climate-card
+                entity: climate.151732606038013_climate
+                name: All Easy Pro
+                show_temperature_control: true
+                collapsible_controls: true
+                hvac_modes: [off, cool, dry, fan_only, auto]
+
+          # Bedroom 3 · Celest 1HP
+          - type: vertical-stack
+            cards:
+              - type: custom:mini-graph-card
+                name: Bedroom 3 · Celest 1HP
+                icon: mdi:air-conditioner
+                entities:
+                  - entity: sensor.celest_bedroom_3_power
+                hours_to_show: 12
+                points_per_hour: 4
+                line_width: 2
+                font_size: 60
+                smoothing: true
+                color_thresholds:
+                  - value: 0
+                    color: "#4ade80"
+                  - value: 400
+                    color: "#fbbf24"
+                  - value: 900
+                    color: "#f87171"
+                show:
+                  fill: fade
+                  points: false
+                  legend: false
+                  labels: false
+              - type: custom:mushroom-climate-card
+                entity: climate.150633095125593_climate
+                name: Celest 1HP
+                show_temperature_control: true
+                collapsible_controls: true
+                hvac_modes: [off, cool, dry, fan_only, auto]
+
+      # ── 4. KITCHEN ────────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:mushroom-title-card
+            title: Kitchen
+            subtitle: >-
+              {{ expand([
+                'sensor.fridge_fridge_power', 'sensor.coway_coway_power',
+                'sensor.kitchen_air_fryer_power', 'sensor.kitchen_rice_cooker_power',
+                'sensor.elba_hood_power', 'sensor.microwave_epower'
+              ]) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W now
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.fridge_fridge_power
+                layout: vertical
+                fill_container: true
+                primary: Refrigerator
+                secondary: "{{ states('sensor.fridge_fridge_power') | float(0) | round(0) | int }} W"
+                icon: mdi:fridge
+                icon_color: >-
+                  {% set w = states('sensor.fridge_fridge_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.coway_coway
+                layout: vertical
+                fill_container: true
+                primary: Coway
+                secondary: "{{ states('sensor.coway_coway_power') | float(0) | round(0) | int }} W"
+                icon: mdi:air-purifier
+                icon_color: >-
+                  {% set w = states('sensor.coway_coway_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.kitchen_air_fryer
+                layout: vertical
+                fill_container: true
+                primary: Air Fryer
+                secondary: "{{ states('sensor.kitchen_air_fryer_power') | float(0) | round(0) | int }} W"
+                icon: mdi:air-fryer
+                icon_color: >-
+                  {% set w = states('sensor.kitchen_air_fryer_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.kitchen_rice_cooker
+                layout: vertical
+                fill_container: true
+                primary: Rice Cooker
+                secondary: "{{ states('sensor.kitchen_rice_cooker_power') | float(0) | round(0) | int }} W"
+                icon: mdi:rice
+                icon_color: >-
+                  {% set w = states('sensor.kitchen_rice_cooker_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.elba_hood
+                layout: vertical
+                fill_container: true
+                primary: Elba Hood
+                secondary: "{{ states('sensor.elba_hood_power') | float(0) | round(0) | int }} W"
+                icon: mdi:range-hood
+                icon_color: >-
+                  {% set w = states('sensor.elba_hood_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.microwave_epower
+                layout: vertical
+                fill_container: true
+                primary: Microwave
+                secondary: "{{ states('sensor.microwave_epower') | float(0) | round(0) | int }} W (est.)"
+                icon: mdi:microwave
+                icon_color: >-
+                  {% set w = states('sensor.microwave_epower') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: more-info
+
+      # ── 5. LIVING ROOM ────────────────────────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:mushroom-title-card
+            title: Living room
+            subtitle: >-
+              {{ expand([
+                'sensor.living_room_tapo_home_server_power', 'sensor.living_room_tapo_main_tv_power',
+                'sensor.entertainment_power', 'sensor.living_room_game_console_power'
+              ]) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W now
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              # Server: tap = details, HOLD = toggle (so a stray tap can't power off the NAS)
+              - type: custom:mushroom-template-card
+                entity: switch.living_room_tapo_home_server
+                layout: vertical
+                fill_container: true
+                primary: Server
+                secondary: "{{ states('sensor.living_room_tapo_home_server_power') | float(0) | round(0) | int }} W"
+                icon: mdi:server
+                icon_color: >-
+                  {% set w = states('sensor.living_room_tapo_home_server_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: more-info
+                hold_action:
+                  action: toggle
+              - type: custom:mushroom-template-card
+                entity: switch.living_room_tapo_main_tv
+                layout: vertical
+                fill_container: true
+                primary: Sharp TV
+                secondary: "{{ states('sensor.living_room_tapo_main_tv_power') | float(0) | round(0) | int }} W"
+                icon: mdi:television
+                icon_color: >-
+                  {% set w = states('sensor.living_room_tapo_main_tv_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.entertainment_power
+                layout: vertical
+                fill_container: true
+                primary: Media & Router
+                secondary: "{{ states('sensor.entertainment_power') | float(0) | round(0) | int }} W"
+                icon: mdi:router-wireless
+                icon_color: >-
+                  {% set w = states('sensor.entertainment_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.living_room_game_console
+                layout: vertical
+                fill_container: true
+                primary: PS5
+                secondary: "{{ states('sensor.living_room_game_console_power') | float(0) | round(0) | int }} W"
+                icon: mdi:sony-playstation
+                icon_color: >-
+                  {% set w = states('sensor.living_room_game_console_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+
+      # ── 6. BEDROOM 2 + YARD / ESTIMATED ───────────────────────────────────
+      - type: grid
+        cards:
+          - type: custom:mushroom-title-card
+            title: Bedroom 2
+            subtitle: >-
+              {{ expand([
+                'sensor.tapo_computer_plug_power_1', 'sensor.tapo_tv_plug_power_1',
+                'sensor.light_fan_light_fan_power'
+              ]) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W now
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: switch.tapo_computer_plug
+                layout: vertical
+                fill_container: true
+                primary: Computer
+                secondary: "{{ states('sensor.tapo_computer_plug_power_1') | float(0) | round(0) | int }} W"
+                icon: mdi:desktop-tower-monitor
+                icon_color: >-
+                  {% set w = states('sensor.tapo_computer_plug_power_1') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.smart_wi_fi_plug
+                layout: vertical
+                fill_container: true
+                primary: Bedroom TV
+                secondary: "{{ states('sensor.tapo_tv_plug_power_1') | float(0) | round(0) | int }} W"
+                icon: mdi:television
+                icon_color: >-
+                  {% set w = states('sensor.tapo_tv_plug_power_1') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.light_fan_light_fan_power
+                layout: vertical
+                fill_container: true
+                primary: Lights & Fan
+                secondary: "{{ states('sensor.light_fan_light_fan_power') | float(0) | round(0) | int }} W"
+                icon: mdi:ceiling-fan-light
+                icon_color: >-
+                  {% set w = states('sensor.light_fan_light_fan_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: more-info
+
+          - type: custom:mushroom-title-card
+            title: Yard & estimated
+            subtitle: Washer/dryer and CT-B estimates
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.washer_dryer_power
+                layout: vertical
+                fill_container: true
+                primary: Washer Dryer
+                secondary: "{{ states('sensor.washer_dryer_power') | float(0) | round(0) | int }} W"
+                icon: mdi:washing-machine
+                icon_color: >-
+                  {% set w = states('sensor.washer_dryer_power') | float(0) %}
+                  {{ 'disabled' if w < 5 else 'green' if w < 100 else 'amber' if w < 800 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.water_heater_epower
+                layout: vertical
+                fill_container: true
+                primary: Water Heater
+                secondary: "{{ states('sensor.water_heater_epower') | float(0) | round(0) | int }} W (est.)"
+                icon: mdi:water-boiler
+                icon_color: >-
+                  {% set w = states('sensor.water_heater_epower') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: input_number.lights_watt_baseline
+                layout: vertical
+                fill_container: true
+                primary: Lights & Fans
+                secondary: "{{ states('input_number.lights_watt_baseline') | float(0) | round(0) | int }} W (est.)"
+                icon: mdi:lightbulb-group
+                icon_color: >-
+                  {% set w = states('input_number.lights_watt_baseline') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                tap_action:
+                  action: more-info
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # VIEW 2 — USAGE (history, uses HA's built-in energy cards)
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: Usage
+    path: usage
+    icon: mdi:chart-areaspline
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: energy-date-selection
+          - type: energy-sankey
+          - type: energy-devices-graph
+            title: Individual devices
+      - type: grid
+        cards:
+          - type: custom:apexcharts-card
+            graph_span: 24h
+            chart_type: area
+            header:
+              show: true
+              title: Power · last 24 h
+              show_states: false
+            apex_config:
+              chart:
+                stacked: true
+                height: 300
+              stroke:
+                width: 1
+              legend:
+                show: true
+                position: bottom
+              yaxis:
+                decimalsInFloat: 0
+                title:
+                  text: W
+            series:
+              - entity: sensor.fridge_fridge_power
+                name: Refrigerator
+                color: "#f59e0b"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.hisense_tugs_power
+                name: Hisense AC
+                color: "#2563eb"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.midea_celest_power
+                name: Celest 2HP
+                color: "#60a5fa"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.midea_all_easy_pro_power
+                name: All Easy Pro
+                color: "#93c5fd"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.celest_bedroom_3_power
+                name: Celest B3
+                color: "#1d4ed8"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.living_room_tapo_home_server_power
+                name: Server
+                color: "#a78bfa"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.tapo_computer_plug_power_1
+                name: Computer
+                color: "#8b5cf6"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.tapo_tv_plug_power_1
+                name: Bedroom TV
+                color: "#2dd4bf"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.living_room_tapo_main_tv_power
+                name: Sharp TV
+                color: "#14b8a6"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.entertainment_power
+                name: Media & Router
+                color: "#5eead4"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.light_fan_light_fan_power
+                name: Bed2 Lights & Fan
+                color: "#f472b6"
+                group_by: { func: avg, duration: 15min }
+              - entity: sensor.coway_coway_power
+                name: Coway
+                color: "#94a3b8"
+                group_by: { func: avg, duration: 15min }
+          - type: energy-devices-detail-graph
+            title: Device usage over time
+          - type: energy-sources-table
