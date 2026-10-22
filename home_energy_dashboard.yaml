@@ -891,100 +891,129 @@ views:
     icon: mdi:chart-areaspline
     type: sections
     max_columns: 2
+    dense_section_placement: true
     sections:
+      # Shared date range for all native Energy cards below.
       - type: grid
         column_span: 2
         cards:
           - type: energy-date-selection
+            grid_options:
+              columns: full
+
+      # Two consistent-width overview cards on desktop; naturally stack on mobile.
+      - type: grid
+        cards:
+          - type: custom:mushroom-template-card
+            entity: sensor.monthly_grid_kwh_usage
+            primary: >-
+              {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
+              {% set n = now() %}
+              {% if n.day >= 15 %}
+                {% set days = ((n.replace(day=28) + timedelta(days=4)).replace(day=1) - n.replace(day=1)).days %}
+                {% set elapsed = n.day - 14 %}
+              {% else %}
+                {% set prev = n.replace(day=1) - timedelta(days=1) %}
+                {% set days = prev.day %}
+                {% set elapsed = prev.day - 14 + n.day %}
+              {% endif %}
+              {% if elapsed > 0 %}{{ (u / elapsed * days) | round(1) }} kWh projected{% else %}Cycle estimate unavailable{% endif %}
+            secondary: >-
+              {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
+              {% set n = now() %}
+              {% if n.day >= 15 %}
+                {% set days = ((n.replace(day=28) + timedelta(days=4)).replace(day=1) - n.replace(day=1)).days %}
+                {% set elapsed = n.day - 14 %}
+              {% else %}
+                {% set prev = n.replace(day=1) - timedelta(days=1) %}
+                {% set days = prev.day %}
+                {% set elapsed = prev.day - 14 + n.day %}
+              {% endif %}
+              {{ u | round(1) }} kWh so far · {{ (u / elapsed) | round(1) if elapsed > 0 else 0 }} kWh/day · TNB cycle 15–14
+            icon: mdi:calendar-sync
+            icon_color: >-
+              {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
+              {% set n = now() %}
+              {% if n.day >= 15 %}
+                {% set days = ((n.replace(day=28) + timedelta(days=4)).replace(day=1) - n.replace(day=1)).days %}
+                {% set elapsed = n.day - 14 %}
+              {% else %}
+                {% set prev = n.replace(day=1) - timedelta(days=1) %}
+                {% set days = prev.day %}
+                {% set elapsed = prev.day - 14 + n.day %}
+              {% endif %}
+              {% set projected = (u / elapsed * days) if elapsed > 0 else u %}
+              {{ 'green' if projected <= 200 else 'amber' if projected <= 400 else 'red' }}
+            layout: horizontal
+            fill_container: true
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: full
+
+      - type: grid
+        cards:
+          - type: custom:mini-graph-card
+            name: Whole house · last 24 h
+            icon: mdi:home-lightning-bolt
+            entities:
+              - entity: sensor.energy_meter_main_ct_power
+                name: Whole house
+            hours_to_show: 24
+            points_per_hour: 4
+            line_width: 3
+            font_size: 60
+            smoothing: true
+            color_thresholds:
+              - value: 0
+                color: '#4ade80'
+              - value: 600
+                color: '#fbbf24'
+              - value: 1500
+                color: '#f87171'
+            show:
+              fill: fade
+              points: false
+              extrema: true
+              average: true
+              labels: false
+              legend: false
+            grid_options:
+              columns: full
+
       - type: grid
         column_span: 2
         cards:
           - type: energy-sankey
+            title: Where the electricity goes
+            layout: auto
+            max_devices: 8
+            group_by_area: true
+            group_by_floor: true
+            show_values: true
+            grid_options:
+              columns: full
+
       - type: grid
         column_span: 2
         cards:
           - type: energy-devices-graph
-            title: Individual devices
+            title: Top devices by energy used
+            max_devices: 8
+            hide_compound_stats: true
+            expand_legend: false
+            grid_options:
+              columns: full
+
+      # Grouped charts make the custom graphs easier to scan and keep their palette coherent.
       - type: grid
         cards:
           - type: custom:mini-graph-card
-            name: Power · last 24 h
-            icon: mdi:flash
-            hours_to_show: 24
-            points_per_hour: 4
-            line_width: 2
-            smoothing: true
-            show:
-              legend: true
-              fill: false
-              labels: false
-              points: false
-            entities:
-              - entity: sensor.fridge_fridge_power
-                name: Refrigerator
-                color: '#f59e0b'
-              - entity: sensor.hisense_tugs_power
-                name: Hisense AC
-                color: '#2563eb'
-              - entity: sensor.midea_celest_power
-                name: Celest 2HP
-                color: '#60a5fa'
-              - entity: sensor.midea_all_easy_pro_power
-                name: All Easy Pro
-                color: '#93c5fd'
-              - entity: sensor.celest_bedroom_3_power
-                name: Celest B3
-                color: '#1d4ed8'
-              - entity: sensor.living_room_tapo_home_server_power
-                name: Server
-                color: '#a78bfa'
-              - entity: sensor.tapo_computer_plug_power_1
-                name: Computer
-                color: '#8b5cf6'
-              - entity: sensor.tapo_tv_plug_power_1
-                name: Bedroom TV
-                color: '#2dd4bf'
-              - entity: sensor.living_room_tapo_main_tv_power
-                name: Sharp TV
-                color: '#14b8a6'
-              - entity: sensor.entertainment_power
-                name: Media & Router
-                color: '#5eead4'
-              - entity: sensor.light_fan_light_fan_power
-                name: Bed2 Lights & Fan
-                color: '#f472b6'
-              - entity: sensor.coway_coway_power
-                name: Coway
-                color: '#94a3b8'
-      - type: grid
-        column_span: 2
-        cards:
-          - type: energy-devices-detail-graph
-            title: Device usage over time
-      - type: grid
-        column_span: 2
-        cards:
-          - type: energy-sources-table
-  - '1':
-      cards: []
-    title: Usage2
-    path: usage
-    icon: mdi:chart-areaspline
-    type: sections
-    max_columns: 2
-    sections:
-      - type: grid
-        column_span: 2
-        cards:
-          - type: energy-date-selection
-      - type: grid
-        cards:
-          - type: custom:mini-graph-card
-            name: Climate · 24 h
+            name: Air-conditioning · 24 h
             icon: mdi:air-conditioner
             hours_to_show: 24
             points_per_hour: 4
-            height: 140
+            height: 150
             line_width: 2
             smoothing: true
             show:
@@ -995,7 +1024,7 @@ views:
               state: false
             entities:
               - entity: sensor.hisense_tugs_power
-                name: Hisense AC
+                name: Hisense
                 color: '#2563eb'
               - entity: sensor.midea_celest_power
                 name: Celest 2HP
@@ -1006,14 +1035,17 @@ views:
               - entity: sensor.celest_bedroom_3_power
                 name: Celest B3
                 color: '#1d4ed8'
+            grid_options:
+              columns: full
+
       - type: grid
         cards:
           - type: custom:mini-graph-card
-            name: Computing & Media · 24 h
+            name: Computing & media · 24 h
             icon: mdi:desktop-tower-monitor
             hours_to_show: 24
             points_per_hour: 4
-            height: 140
+            height: 150
             line_width: 2
             smoothing: true
             show:
@@ -1038,14 +1070,49 @@ views:
               - entity: sensor.entertainment_power
                 name: Media & Router
                 color: '#5eead4'
+            grid_options:
+              columns: full
+
       - type: grid
         cards:
           - type: custom:mini-graph-card
-            name: Household · 24 h
-            icon: mdi:home-lightning-bolt
+            name: Kitchen appliances · 24 h
+            icon: mdi:countertop-outline
             hours_to_show: 24
             points_per_hour: 4
-            height: 140
+            height: 150
+            line_width: 2
+            smoothing: true
+            show:
+              legend: true
+              fill: false
+              labels: false
+              points: false
+              state: false
+            entities:
+              - entity: sensor.kitchen_air_fryer_power
+                name: Air fryer
+                color: '#f59e0b'
+              - entity: sensor.kitchen_rice_cooker_power
+                name: Rice cooker
+                color: '#d97706'
+              - entity: sensor.elba_hood_power
+                name: Hood
+                color: '#f472b6'
+              - entity: sensor.microwave_epower
+                name: Microwave (est.)
+                color: '#fb7185'
+            grid_options:
+              columns: full
+
+      - type: grid
+        cards:
+          - type: custom:mini-graph-card
+            name: Household & always-on · 24 h
+            icon: mdi:home-outline
+            hours_to_show: 24
+            points_per_hour: 4
+            height: 150
             line_width: 2
             smoothing: true
             show:
@@ -1059,23 +1126,29 @@ views:
                 name: Refrigerator
                 color: '#f59e0b'
               - entity: sensor.light_fan_light_fan_power
-                name: Bed2 Lights & Fan
+                name: Lights & fan
                 color: '#f472b6'
               - entity: sensor.coway_coway_power
                 name: Coway
                 color: '#94a3b8'
-      - type: grid
-        column_span: 2
-        cards:
-          - type: energy-devices-graph
-            title: Individual devices
+              - entity: sensor.washer_dryer_power
+                name: Washer/dryer
+                color: '#0d9488'
+            grid_options:
+              columns: full
+
       - type: grid
         column_span: 2
         cards:
           - type: energy-devices-detail-graph
             title: Device usage over time
+            max_devices: 12
+            grid_options:
+              columns: full
+
       - type: grid
         column_span: 2
         cards:
           - type: energy-sources-table
-    cards: []
+            grid_options:
+              columns: full
