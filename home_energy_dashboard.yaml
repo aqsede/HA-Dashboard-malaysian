@@ -882,7 +882,121 @@ views:
                   else 'amber' if w < 500 else 'red' }}
                 tap_action:
                   action: more-info
-
+      - type: grid
+        cards:
+          - type: custom:mushroom-title-card
+            title: Fridge health
+            subtitle: Night idle vs your best-ever baseline
+          - type: custom:mushroom-template-card
+            entity: sensor.fridge_health_status
+            layout: horizontal
+            fill_container: true
+            tap_action:
+              action: more-info
+            primary: >-
+              {{ (states('sensor.fridge_health_status') | replace('_', ' ') |
+              title) if has_value('sensor.fridge_health_status') else 'No data' }}
+            secondary: >-
+              {% if has_value('sensor.fridge_idle_drift') %}drift {{
+              states('sensor.fridge_idle_drift') | float(0) | round(1) }} {{
+              state_attr('sensor.fridge_idle_drift', 'unit_of_measurement') or
+              '' }} from best{% else %}drift unavailable{% endif %}{% if
+              has_value('sensor.fridge_health_score') %} · score {{
+              states('sensor.fridge_health_score') }}{% endif %}
+            icon: >-
+              {% if has_value('sensor.fridge_idle_drift') and
+              states('sensor.fridge_idle_drift') | float(0) >= 25
+              %}mdi:fridge-alert{% else %}mdi:fridge{% endif %}
+            icon_color: >-
+              {% if not has_value('sensor.fridge_idle_drift') %}disabled{% else
+              %}{% set d = states('sensor.fridge_idle_drift') | float(0) %}{{
+              'green' if d < 12 else 'amber' if d < 25 else 'red' }}{% endif %}
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.fridge_night_idle_median_30d
+                layout: vertical
+                fill_container: true
+                primary: >-
+                  {% if has_value(entity) %}{{ states(entity) | float(0) |
+                  round(1) }} {{ state_attr(entity, 'unit_of_measurement') or
+                  'W' }}{% else %}—{% endif %}
+                secondary: Night idle · 30d median
+                icon: mdi:weather-night
+                icon_color: blue
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: input_number.fridge_base_night_w
+                layout: vertical
+                fill_container: true
+                primary: >-
+                  {% if has_value(entity) %}{{ states(entity) | float(0) |
+                  round(1) }} {{ state_attr(entity, 'unit_of_measurement') or
+                  'W' }}{% else %}—{% endif %}
+                secondary: Best-ever night idle
+                icon: mdi:trophy-outline
+                icon_color: green
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.fridge_energy_median_30d
+                layout: vertical
+                fill_container: true
+                primary: >-
+                  {% if has_value(entity) %}{{ states(entity) | float(0) |
+                  round(1) }} {{ state_attr(entity, 'unit_of_measurement') or
+                  '' }}{% else %}—{% endif %}
+                secondary: Typical day · 30d
+                icon: mdi:flash-outline
+                icon_color: amber
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.fridge_grocery_days_30d
+                layout: vertical
+                fill_container: true
+                primary: >-
+                  {% if has_value(entity) %}{{ states(entity) | int(0) }}{%
+                  else %}—{% endif %}
+                secondary: Grocery days · 30d
+                icon: mdi:cart-outline
+                icon_color: >-
+                  {{ 'disabled' if not has_value(entity) else 'green' if
+                  states(entity) | int(0) <= 3 else 'amber' }}
+                tap_action:
+                  action: more-info
+          - type: custom:mini-graph-card
+            name: Night idle · 90 days
+            icon: mdi:fridge-outline
+            entities:
+              - entity: sensor.fridge_night_idle
+                name: Night idle
+                color: '#60a5fa'
+              - entity: sensor.fridge_night_idle_median_30d
+                name: 30d median
+                color: '#fbbf24'
+                show_fill: false
+              - entity: input_number.fridge_base_night_w
+                name: Best
+                color: '#4ade80'
+                show_fill: false
+            hours_to_show: 2160
+            group_by: date
+            aggregate_func: avg
+            line_width: 2
+            font_size: 60
+            smoothing: true
+            show:
+              fill: fade
+              points: false
+              legend: true
+              labels: false
+              extrema: false
+              average: false
+  
   # ═══════════════════════════════════════════════════════════════════════════
   # VIEW 2 — USAGE (history, uses HA's built-in energy cards)
   # ═══════════════════════════════════════════════════════════════════════════
