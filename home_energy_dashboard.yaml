@@ -770,7 +770,7 @@ views:
               type: markdown
               content: Everything is idle 🌙
 
-      # ── 3. AIRCOND (live watts + full control) ────────────────────────────
+# ── 3. AIRCOND (live watts + full control) ────────────────────────────
       - type: grid
         cards:
           - type: heading
@@ -801,17 +801,28 @@ views:
                   points: false
                   legend: false
                   labels: false
-              - type: custom:mushroom-climate-card
-                entity: climate.ai10tugs
-                name: Hisense
-                show_temperature_control: true
-                collapsible_controls: true
-                hvac_modes:
-                  - false
-                  - cool
-                  - dry
-                  - fan_only
-                  - auto
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.ai10tugs
+                    state:
+                      - "off"
+                      - "cool"
+                      - "dry"
+                      - "fan_only"
+                      - "auto"
+                card:
+                  type: custom:mushroom-climate-card
+                  entity: climate.ai10tugs
+                  name: Hisense
+                  show_temperature_control: true
+                  collapsible_controls: true
+                  hvac_modes:
+                    - false
+                    - cool
+                    - dry
+                    - fan_only
+                    - auto
               - type: custom:mushroom-chips-card
                 alignment: center
                 chips:
@@ -853,7 +864,6 @@ views:
                   points: false
                   legend: false
                   labels: false
-              # ── Replaced with Conditional Card ───────────────────────────
               - type: conditional
                 conditions:
                   - condition: state
@@ -900,17 +910,28 @@ views:
                   points: false
                   legend: false
                   labels: false
-              - type: custom:mushroom-climate-card
-                entity: climate.151732606038013_climate
-                name: All Easy Pro
-                show_temperature_control: true
-                collapsible_controls: true
-                hvac_modes:
-                  - false
-                  - cool
-                  - dry
-                  - fan_only
-                  - auto
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.151732606038013_climate
+                    state:
+                      - "off"
+                      - "cool"
+                      - "dry"
+                      - "fan_only"
+                      - "auto"
+                card:
+                  type: custom:mushroom-climate-card
+                  entity: climate.151732606038013_climate
+                  name: All Easy Pro
+                  show_temperature_control: true
+                  collapsible_controls: true
+                  hvac_modes:
+                    - false
+                    - cool
+                    - dry
+                    - fan_only
+                    - auto
           - type: vertical-stack
             cards:
               - type: custom:mini-graph-card
@@ -935,17 +956,28 @@ views:
                   points: false
                   legend: false
                   labels: false
-              - type: custom:mushroom-climate-card
-                entity: climate.150633095125593_climate
-                name: Celest 1HP
-                show_temperature_control: true
-                collapsible_controls: true
-                hvac_modes:
-                  - false
-                  - cool
-                  - dry
-                  - fan_only
-                  - auto
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.150633095125593_climate
+                    state:
+                      - "off"
+                      - "cool"
+                      - "dry"
+                      - "fan_only"
+                      - "auto"
+                card:
+                  type: custom:mushroom-climate-card
+                  entity: climate.150633095125593_climate
+                  name: Celest 1HP
+                  show_temperature_control: true
+                  collapsible_controls: true
+                  hvac_modes:
+                    - false
+                    - cool
+                    - dry
+                    - fan_only
+                    - auto
       # ── 4. KITCHEN ────────────────────────────────────────────────────────
       - type: grid
         cards:
