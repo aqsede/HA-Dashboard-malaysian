@@ -1429,42 +1429,39 @@ views:
             entity: sensor.monthly_grid_kwh_usage
             primary: >-
               {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
-              {% set n = now() %}
-              {% if n.day >= 15 %}
+              {% set n = now() %} {% if n.day >= 15 %}
                 {% set days = ((n.replace(day=28) + timedelta(days=4)).replace(day=1) - n.replace(day=1)).days %}
                 {% set elapsed = n.day - 14 %}
               {% else %}
                 {% set prev = n.replace(day=1) - timedelta(days=1) %}
                 {% set days = prev.day %}
                 {% set elapsed = prev.day - 14 + n.day %}
-              {% endif %}
-              {% if elapsed > 0 %}{{ (u / elapsed * days) | round(1) }} kWh projected{% else %}Cycle estimate unavailable{% endif %}
+              {% endif %} {% if elapsed > 0 %}{{ (u / elapsed * days) | round(1)
+              }} kWh projected{% else %}Cycle estimate unavailable{% endif %}
             secondary: >-
               {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
-              {% set n = now() %}
-              {% if n.day >= 15 %}
+              {% set n = now() %} {% if n.day >= 15 %}
                 {% set days = ((n.replace(day=28) + timedelta(days=4)).replace(day=1) - n.replace(day=1)).days %}
                 {% set elapsed = n.day - 14 %}
               {% else %}
                 {% set prev = n.replace(day=1) - timedelta(days=1) %}
                 {% set days = prev.day %}
                 {% set elapsed = prev.day - 14 + n.day %}
-              {% endif %}
-              {{ u | round(1) }} kWh so far · {{ (u / elapsed) | round(1) if elapsed > 0 else 0 }} kWh/day · TNB cycle 15–14
+              {% endif %} {{ u | round(1) }} kWh so far · {{ (u / elapsed) |
+              round(1) if elapsed > 0 else 0 }} kWh/day · TNB cycle 15–14
             icon: mdi:calendar-sync
             icon_color: >-
               {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
-              {% set n = now() %}
-              {% if n.day >= 15 %}
+              {% set n = now() %} {% if n.day >= 15 %}
                 {% set days = ((n.replace(day=28) + timedelta(days=4)).replace(day=1) - n.replace(day=1)).days %}
                 {% set elapsed = n.day - 14 %}
               {% else %}
                 {% set prev = n.replace(day=1) - timedelta(days=1) %}
                 {% set days = prev.day %}
                 {% set elapsed = prev.day - 14 + n.day %}
-              {% endif %}
-              {% set projected = (u / elapsed * days) if elapsed > 0 else u %}
-              {{ 'green' if projected <= 200 else 'amber' if projected <= 400 else 'red' }}
+              {% endif %} {% set projected = (u / elapsed * days) if elapsed > 0
+              else u %} {{ 'green' if projected <= 200 else 'amber' if projected
+              <= 400 else 'red' }}
             layout: horizontal
             fill_container: true
             tap_action:
@@ -1501,7 +1498,135 @@ views:
               legend: false
             grid_options:
               columns: full
-
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:mushroom-title-card
+            title: Appliance use
+            subtitle: >-
+              {% set t = now().date() %} {% set s = t.replace(day=15) if t.day
+              >= 15 else (t.replace(day=1) - timedelta(days=1)).replace(day=15)
+              %} {% set n = ((s + timedelta(days=20)).replace(day=15) - s).days
+              %} Billing cycle from {{ s.strftime('%d %b') }} · day {{ (t -
+              s).days + 1 }} of {{ n }}
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: counter.ac_livingroom_monthly
+                layout: vertical
+                fill_container: true
+                primary: Living room
+                secondary: >-
+                  {{ states('counter.ac_livingroom_monthly') | int(0) }} uses ·
+                  last {{ states('counter.ac_livingroom_last_month') | int(0) }}
+                icon: mdi:air-conditioner
+                icon_color: >-
+                  {{ 'blue' if is_state('input_boolean.ac_livingroom_active',
+                  'on') else 'disabled' }}
+                badge_icon: >-
+                  {{ 'mdi:play' if
+                  is_state('input_boolean.ac_livingroom_active', 'on') else ''
+                  }}
+                badge_color: green
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: counter.ac_masterbedroom_monthly
+                layout: vertical
+                fill_container: true
+                primary: Master bedroom
+                secondary: >-
+                  {{ states('counter.ac_masterbedroom_monthly') | int(0) }} uses
+                  · last {{ states('counter.ac_masterbedroom_last_month') |
+                  int(0) }}
+                icon: mdi:air-conditioner
+                icon_color: >-
+                  {{ 'blue' if is_state('input_boolean.ac_masterbedroom_active',
+                  'on') else 'disabled' }}
+                badge_icon: >-
+                  {{ 'mdi:play' if
+                  is_state('input_boolean.ac_masterbedroom_active', 'on') else
+                  '' }}
+                badge_color: green
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: counter.ac_bedroom2_monthly
+                layout: vertical
+                fill_container: true
+                primary: Bedroom 2
+                secondary: >-
+                  {{ states('counter.ac_bedroom2_monthly') | int(0) }} uses ·
+                  last {{ states('counter.ac_bedroom2_last_month') | int(0) }}
+                icon: mdi:air-conditioner
+                icon_color: >-
+                  {{ 'blue' if is_state('input_boolean.ac_bedroom2_active',
+                  'on') else 'disabled' }}
+                badge_icon: >-
+                  {{ 'mdi:play' if is_state('input_boolean.ac_bedroom2_active',
+                  'on') else '' }}
+                badge_color: green
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: counter.ac_bedroom3_monthly
+                layout: vertical
+                fill_container: true
+                primary: Bedroom 3
+                secondary: >-
+                  {{ states('counter.ac_bedroom3_monthly') | int(0) }} uses ·
+                  last {{ states('counter.ac_bedroom3_last_month') | int(0) }}
+                icon: mdi:air-conditioner
+                icon_color: >-
+                  {{ 'blue' if is_state('input_boolean.ac_bedroom3_active',
+                  'on') else 'disabled' }}
+                badge_icon: >-
+                  {{ 'mdi:play' if is_state('input_boolean.ac_bedroom3_active',
+                  'on') else '' }}
+                badge_color: green
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                layout: vertical
+                fill_container: true
+                primary: Aircond total
+                secondary: >-
+                  {{ expand(['counter.ac_livingroom_monthly',
+                  'counter.ac_masterbedroom_monthly',
+                  'counter.ac_bedroom2_monthly', 'counter.ac_bedroom3_monthly'])
+                  | map(attribute='state') | map('int', 0) | sum }} uses · last
+                  {{ expand(['counter.ac_livingroom_last_month',
+                  'counter.ac_masterbedroom_last_month',
+                  'counter.ac_bedroom2_last_month',
+                  'counter.ac_bedroom3_last_month']) | map(attribute='state') |
+                  map('int', 0) | sum }}
+                icon: mdi:snowflake
+                icon_color: >-
+                  {{ 'blue' if expand(['input_boolean.ac_livingroom_active',
+                  'input_boolean.ac_masterbedroom_active',
+                  'input_boolean.ac_bedroom2_active',
+                  'input_boolean.ac_bedroom3_active']) | selectattr('state',
+                  'eq', 'on') | list | length > 0 else 'disabled' }}
+              - type: custom:mushroom-template-card
+                entity: counter.dryer_monthly
+                layout: vertical
+                fill_container: true
+                primary: Dryer
+                secondary: >-
+                  {{ states('counter.dryer_monthly') | int(0) }} cycles · last
+                  {{ states('counter.dryer_last_month') | int(0) }}
+                icon: mdi:tumble-dryer
+                icon_color: >-
+                  {{ 'blue' if is_state('input_boolean.dryer_active', 'on') else
+                  'disabled' }}
+                badge_icon: >-
+                  {{ 'mdi:play' if is_state('input_boolean.dryer_active', 'on')
+                  else '' }}
+                badge_color: green
+                tap_action:
+                  action: more-info
       - type: grid
         column_span: 2
         cards:
