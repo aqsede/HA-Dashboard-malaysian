@@ -85,6 +85,8 @@ views:
           # ── TNB electricity: this bill cycle (15th–14th) + last cycle ─────
           # Rebate (EEI) band is set by TOTAL monthly kWh and applies to ALL kWh (cliff, not marginal).
           # tgt = 250 is the cliff being defended. Limit/step/status cards watch max(band of usage, 250).
+          # flex = 260: normal home-month range (label only). red = 280: icon turns red only above this.
+          # Away months (~240) sit just under 250 and show green/amber depending on the margin m.
           # m = safety buffer: 15 kWh at cycle start, shrinking to 5 kWh at cycle end.
           # k = 1.06 converts your meter kWh to TNB-billed kWh. Recalibrate against a real bill.
           - type: custom:mushroom-title-card
@@ -94,6 +96,8 @@ views:
               {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
               {%- set k = 1.06 -%}
               {%- set tgt = 250 -%}
+              {%- set flex = 260 -%}
+              {%- set red = 280 -%}
               {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
               {%- set u = raw * k -%}
               {%- set t = now() -%}
@@ -122,6 +126,8 @@ views:
               {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
               {%- set k = 1.06 -%}
               {%- set tgt = 250 -%}
+              {%- set flex = 260 -%}
+              {%- set red = 280 -%}
               {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
               {%- set u = raw * k -%}
               {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
@@ -135,6 +141,8 @@ views:
               {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
               {%- set k = 1.06 -%}
               {%- set tgt = 250 -%}
+              {%- set flex = 260 -%}
+              {%- set red = 280 -%}
               {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
               {%- set u = raw * k -%}
               {%- set t = now() -%}
@@ -155,7 +163,7 @@ views:
               {{ '%.1f' | format(u) }} kWh TNB est. · meter {{ '%.1f' | format(raw) }}
               {{- '\n' -}}
               {%- if el < 1 -%}Projection starts after day 1
-              {%- else -%}Projected {{ pu | round(0) | int }} kWh → ~RM {{ '%.2f' | format(projc) }}
+              {%- else -%}Projected {{ pu | round(0) | int }} kWh{% if pu > tgt and pu <= flex %} (home-month range){% endif %} → ~RM {{ '%.2f' | format(projc) }}
               {%- if hi and pu > hi %}{{- '\n' -}}+{{ '%.1f' | format(pu - hi) }} kWh over {{ hi }} → ~RM {{ '%.2f' | format(projc - atcap) }} extra{%- endif -%}
               {%- endif -%}
             icon: mdi:flash
@@ -164,6 +172,8 @@ views:
               {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
               {%- set k = 1.06 -%}
               {%- set tgt = 250 -%}
+              {%- set flex = 260 -%}
+              {%- set red = 280 -%}
               {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
               {%- set u = raw * k -%}
               {%- set t = now() -%}
@@ -172,7 +182,7 @@ views:
               {%- set el = (t - s).total_seconds() / 86400 -%}
               {%- set pu = u / el * n if el >= 1 else u -%}
               {%- set m = 5 + 10 * ((n - el) / n) -%}
-              {{ 'red' if pu > tgt else ('amber' if pu > tgt - m else 'green') }}
+              {{ 'red' if pu > red else ('amber' if pu > tgt - m else 'green') }}
             grid_options:
               columns: full
           - type: grid
@@ -188,6 +198,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
@@ -203,6 +215,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
@@ -217,6 +231,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {{ 'green' if u <= tgt else 'red' }}
@@ -229,6 +245,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
@@ -242,6 +260,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set t = now() -%}
@@ -270,6 +290,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
@@ -286,6 +308,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set t = now() -%}
@@ -312,6 +336,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set t = now() -%}
@@ -333,6 +359,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set t = now() -%}
@@ -348,7 +376,7 @@ views:
                   {%- set disc = tc.disc if tc is defined else 0 -%}
                   {%- set cross = hi > 0 and pu > hi -%}
                   {%- set avg = u / el if el >= 1 else u -%}
-                  {{ 'disabled' if not hi else 'red' if cross else 'amber' if hi - pu <= m else 'green' }}
+                  {{ 'disabled' if not hi else 'red' if pu > red else 'amber' if cross or hi - pu <= m else 'green' }}
               - type: custom:mushroom-template-card
                 layout: vertical
                 fill_container: true
@@ -358,6 +386,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set lp = state_attr('sensor.monthly_grid_kwh_usage', 'last_period') -%}
@@ -370,6 +400,8 @@ views:
                   {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
                   {%- set k = 1.06 -%}
                   {%- set tgt = 250 -%}
+                  {%- set flex = 260 -%}
+                  {%- set red = 280 -%}
                   {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0) -%}
                   {%- set u = raw * k -%}
                   {%- set lp = state_attr('sensor.monthly_grid_kwh_usage', 'last_period') -%}
