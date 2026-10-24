@@ -763,6 +763,9 @@ views:
                 - entity_id: sensor.shelly_ct_b_snapshot
                 # Duplicate of Midea Celest (living room)
                 - entity_id: sensor.150633094438435_realtime_power
+                # Excluded virtual/learning idle sensors
+                - entity_id: sensor.fridge_night_idle
+                - entity_id: sensor.fridge_night_idle_median_30d
                 - state: unavailable
                 - state: unknown
                 - state: < 1
