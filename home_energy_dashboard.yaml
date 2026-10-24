@@ -91,7 +91,7 @@ views:
               'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc':
               -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
               {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max':
-              600, 'disc': -9.0}] -%}
+              600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
               {%- set k = 1.06 -%}
 
@@ -140,7 +140,7 @@ views:
               'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc':
               -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
               {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max':
-              600, 'disc': -9.0}] -%}
+              600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
               {%- set k = 1.06 -%}
 
@@ -163,7 +163,7 @@ views:
               'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc':
               -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
               {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max':
-              600, 'disc': -9.0}] -%}
+              600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
               {%- set k = 1.06 -%}
 
@@ -218,7 +218,7 @@ views:
               'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc':
               -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
               {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max':
-              600, 'disc': -9.0}] -%}
+              600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
               {%- set k = 1.06 -%}
 
@@ -271,7 +271,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
@@ -299,7 +299,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
@@ -324,7 +324,7 @@ views:
 
                   {%- set u = raw * k -%}
 
-                  {{ 'green' if u <= 200 else ('amber' if u <= 400 else 'red')
+                  {{ 'green' if u <= 300 else ('amber' if u <= 450 else 'red')
                   }}
               - type: custom:mushroom-template-card
                 layout: vertical
@@ -334,7 +334,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
@@ -356,7 +356,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
@@ -401,7 +401,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
@@ -429,7 +429,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
@@ -483,7 +483,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
@@ -527,7 +527,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
@@ -576,7 +576,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
@@ -596,7 +596,7 @@ views:
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] | rejectattr('max', 'lt', 300) | list -%}
 
                   {%- set k = 1.06 -%}
 
