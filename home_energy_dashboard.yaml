@@ -87,42 +87,178 @@ views:
           - type: custom:mushroom-title-card
             title: TNB electricity
             subtitle: >-
-              {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc':
-              -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0},
-              {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5}, {'max':
-              500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max': 600,
-              'disc': -9.0}] %} {% set u =
-              states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t =
-              blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max if
-              t is defined else 0 %}{% set disc = t.disc if t is defined else 0
-              %} {% set pe = ((blocks | selectattr('max', 'lt', hi) |
-              map(attribute='max') | list) + [0]) | max %}{% set lo = pe + 1 if
-              pe > 0 else 0 %} {% if hi %}{{ ((u - pe) / (hi - pe) * 100) |
-              round(0) | int }}% through the {{ lo }}–{{ hi }} kWh tier{% else
-              %}Above all tiers · no discount{% endif %}
+              {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+              'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc':
+              -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
+              {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max':
+              600, 'disc': -9.0}] -%}
+
+              {%- set k = 1.06 -%}
+
+              {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0)
+              -%}
+
+              {%- set u = raw * k -%}
+
+              {%- set t = now() -%}
+
+              {%- set s = (t.replace(day=15) if t.day >= 15 else
+              (t.replace(day=1) -
+              timedelta(days=1)).replace(day=15)).replace(hour=0, minute=0,
+              second=0, microsecond=0) -%}
+
+              {%- set n = ((s + timedelta(days=20)).replace(day=15) - s).days
+              -%}
+
+              {%- set el = (t - s).total_seconds() / 86400 -%}
+
+              {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+              {%- set hi = tc.max if tc is defined else 0 -%}
+
+              {%- set disc = tc.disc if tc is defined else 0 -%}
+
+              {%- set pe = ((blocks | selectattr('max', 'lt', hi) |
+              map(attribute='max') | list) + [0]) | max -%}
+
+              {%- set lo = pe + 1 if pe > 0 else 0 -%}
+
+              Day {{ (t - s).days + 1 }}/{{ n }} · {% if hi %}{{ ((u - pe) / (hi
+              - pe) * 100) | round(0) | int }}% through the {{ lo }}–{{ hi }}
+              kWh tier{% else %}Above all tiers · no discount{% endif %}
           - type: custom:mushroom-template-card
             entity: sensor.monthly_grid_kwh_usage
             layout: horizontal
             fill_container: true
+            multiline_secondary: true
             tap_action:
               action: more-info
             primary: >-
-              {% set base = 0.2703 + 0.0455 + 0.1285 %} {% set blocks = [{'max':
-              200, 'disc': -25.0}, {'max': 250, 'disc': -24.5}, {'max': 300,
-              'disc': -22.5}, {'max': 350, 'disc': -21.0}, {'max': 400, 'disc':
-              -17.0}, {'max': 450, 'disc': -14.5}, {'max': 500, 'disc': -12.0},
-              {'max': 550, 'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set
-              u = states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t
-              = blocks | selectattr('max', 'ge', u) | first %}{% set hi = t.max
-              if t is defined else 0 %}{% set disc = t.disc if t is defined else
-              0 %} RM {{ '%.2f' | format(u * (base + disc / 100)) }}
+              {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
+
+              {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+              'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc':
+              -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
+              {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max':
+              600, 'disc': -9.0}] -%}
+
+              {%- set k = 1.06 -%}
+
+              {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0)
+              -%}
+
+              {%- set u = raw * k -%}
+
+              {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+              {%- set hi = tc.max if tc is defined else 0 -%}
+
+              {%- set disc = tc.disc if tc is defined else 0 -%}
+
+              ~RM {{ '%.2f' | format(u * (base + disc / 100)) }} est. bill
             secondary: >-
-              {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
-              {{ '%.2f' | format(u) }} kWh this cycle
+              {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
+
+              {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+              'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc':
+              -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
+              {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max':
+              600, 'disc': -9.0}] -%}
+
+              {%- set k = 1.06 -%}
+
+              {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0)
+              -%}
+
+              {%- set u = raw * k -%}
+
+              {%- set t = now() -%}
+
+              {%- set s = (t.replace(day=15) if t.day >= 15 else
+              (t.replace(day=1) -
+              timedelta(days=1)).replace(day=15)).replace(hour=0, minute=0,
+              second=0, microsecond=0) -%}
+
+              {%- set n = ((s + timedelta(days=20)).replace(day=15) - s).days
+              -%}
+
+              {%- set el = (t - s).total_seconds() / 86400 -%}
+
+              {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+              {%- set hi = tc.max if tc is defined else 0 -%}
+
+              {%- set disc = tc.disc if tc is defined else 0 -%}
+
+              {%- set avg = u / el if el >= 1 else u -%}
+
+              {%- set pu = u / el * n if el >= 1 else u -%}
+
+              {%- set pc = blocks | selectattr('max', 'ge', pu) | first -%}
+
+              {%- set pd = pc.disc if pc is defined else 0 -%}
+
+              {%- set cross = hi > 0 and pu > hi -%}
+
+              {%- set cur = u * (base + disc / 100) -%}
+
+              {%- set projc = pu * (base + pd / 100) -%}
+
+              {{ '%.1f' | format(u) }} kWh TNB est. · meter {{ '%.1f' |
+              format(raw) }}
+
+              {{- '\n' -}}
+
+              {%- if el >= 1 -%}Projected {{ pu | round(0) | int }} kWh → ~RM {{
+              '%.2f' | format(projc) }}{%- else -%}Projection starts after day
+              1{%- endif -%}
             icon: mdi:flash
             icon_color: >-
-              {% set u = states('sensor.monthly_grid_kwh_usage') | float(0) %}
-              {{ 'green' if u <= 200 else ('amber' if u <= 400 else 'red') }}
+              {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+              'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350, 'disc':
+              -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
+              {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5}, {'max':
+              600, 'disc': -9.0}] -%}
+
+              {%- set k = 1.06 -%}
+
+              {%- set raw = states('sensor.monthly_grid_kwh_usage') | float(0)
+              -%}
+
+              {%- set u = raw * k -%}
+
+              {%- set t = now() -%}
+
+              {%- set s = (t.replace(day=15) if t.day >= 15 else
+              (t.replace(day=1) -
+              timedelta(days=1)).replace(day=15)).replace(hour=0, minute=0,
+              second=0, microsecond=0) -%}
+
+              {%- set n = ((s + timedelta(days=20)).replace(day=15) - s).days
+              -%}
+
+              {%- set el = (t - s).total_seconds() / 86400 -%}
+
+              {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+              {%- set hi = tc.max if tc is defined else 0 -%}
+
+              {%- set disc = tc.disc if tc is defined else 0 -%}
+
+              {%- set avg = u / el if el >= 1 else u -%}
+
+              {%- set pu = u / el * n if el >= 1 else u -%}
+
+              {%- set pc = blocks | selectattr('max', 'ge', pu) | first -%}
+
+              {%- set pd = pc.disc if pc is defined else 0 -%}
+
+              {%- set cross = hi > 0 and pu > hi -%}
+
+              {{ 'red' if cross or not hi else ('amber' if hi - pu <= 5 else
+              'green') }}
+            grid_options:
+              columns: full
           - type: grid
             columns: 2
             square: false
@@ -131,120 +267,350 @@ views:
                 layout: vertical
                 fill_container: true
                 primary: >-
-                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u =
-                  states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t
-                  = blocks | selectattr('max', 'ge', u) | first %}{% set hi =
-                  t.max if t is defined else 0 %}{% set disc = t.disc if t is
-                  defined else 0 %} {% set pe = ((blocks | selectattr('max',
-                  'lt', hi) | map(attribute='max') | list) + [0]) | max %}{% set
-                  lo = pe + 1 if pe > 0 else 0 %} {% if hi %}{{ lo }}–{{ hi }}
-                  kWh{% else %}600+ kWh{% endif %}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set raw = states('sensor.monthly_grid_kwh_usage') |
+                  float(0) -%}
+
+                  {%- set u = raw * k -%}
+
+                  {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+                  {%- set hi = tc.max if tc is defined else 0 -%}
+
+                  {%- set disc = tc.disc if tc is defined else 0 -%}
+
+                  {%- set pe = ((blocks | selectattr('max', 'lt', hi) |
+                  map(attribute='max') | list) + [0]) | max -%}
+
+                  {%- set lo = pe + 1 if pe > 0 else 0 -%}
+
+                  {% if hi %}{{ lo }}–{{ hi }} kWh{% else %}600+ kWh{% endif %}
                 secondary: >-
-                  {% set base = 0.2703 + 0.0455 + 0.1285 %} {% set blocks =
-                  [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5},
-                  {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0},
-                  {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
-                  {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5},
-                  {'max': 600, 'disc': -9.0}] %} {% set u =
-                  states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t
-                  = blocks | selectattr('max', 'ge', u) | first %}{% set hi =
-                  t.max if t is defined else 0 %}{% set disc = t.disc if t is
-                  defined else 0 %} {{ '%.2f' | format((base + disc / 100) *
-                  100) }} sen/kWh
+                  {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
+
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
+                  'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
+                  'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set raw = states('sensor.monthly_grid_kwh_usage') |
+                  float(0) -%}
+
+                  {%- set u = raw * k -%}
+
+                  {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+                  {%- set hi = tc.max if tc is defined else 0 -%}
+
+                  {%- set disc = tc.disc if tc is defined else 0 -%}
+
+                  {{ '%.2f' | format((base + disc / 100) * 100) }} sen/kWh
                 icon: mdi:layers-outline
                 icon_color: >-
-                  {% set u = states('sensor.monthly_grid_kwh_usage') | float(0)
-                  %} {{ 'green' if u <= 200 else ('amber' if u <= 400 else
-                  'red') }}
+                  {%- set k = 1.06 -%}
+
+                  {%- set raw = states('sensor.monthly_grid_kwh_usage') |
+                  float(0) -%}
+
+                  {%- set u = raw * k -%}
+
+                  {{ 'green' if u <= 200 else ('amber' if u <= 400 else 'red')
+                  }}
               - type: custom:mushroom-template-card
                 layout: vertical
                 fill_container: true
                 primary: >-
-                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u =
-                  states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t
-                  = blocks | selectattr('max', 'ge', u) | first %}{% set hi =
-                  t.max if t is defined else 0 %}{% set disc = t.disc if t is
-                  defined else 0 %} {% if hi %}{{ '%.1f' | format(hi - u) }}
-                  kWh{% else %}Top tier{% endif %}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set raw = states('sensor.monthly_grid_kwh_usage') |
+                  float(0) -%}
+
+                  {%- set u = raw * k -%}
+
+                  {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+                  {%- set hi = tc.max if tc is defined else 0 -%}
+
+                  {%- set disc = tc.disc if tc is defined else 0 -%}
+
+                  {% if hi %}{{ '%.1f' | format(hi - u) }} kWh{% else %}Top
+                  tier{% endif %}
                 secondary: >-
-                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u =
-                  states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t
-                  = blocks | selectattr('max', 'ge', u) | first %}{% set hi =
-                  t.max if t is defined else 0 %}{% set disc = t.disc if t is
-                  defined else 0 %} {% if hi %}left before {{ hi }} kWh{% else
-                  %}no discount left{% endif %}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set raw = states('sensor.monthly_grid_kwh_usage') |
+                  float(0) -%}
+
+                  {%- set u = raw * k -%}
+
+                  {%- set t = now() -%}
+
+                  {%- set s = (t.replace(day=15) if t.day >= 15 else
+                  (t.replace(day=1) -
+                  timedelta(days=1)).replace(day=15)).replace(hour=0, minute=0,
+                  second=0, microsecond=0) -%}
+
+                  {%- set n = ((s + timedelta(days=20)).replace(day=15) -
+                  s).days -%}
+
+                  {%- set el = (t - s).total_seconds() / 86400 -%}
+
+                  {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+                  {%- set hi = tc.max if tc is defined else 0 -%}
+
+                  {%- set disc = tc.disc if tc is defined else 0 -%}
+
+                  {%- if not hi -%}no discount left
+
+                  {%- elif n - el >= 0.5 -%}left · ≤ {{ '%.1f' | format((hi - u)
+                  / (n - el)) }} kWh/day
+
+                  {%- else -%}left before {{ hi }} kWh
+
+                  {%- endif -%}
                 icon: mdi:arrow-right-circle-outline
                 icon_color: blue
               - type: custom:mushroom-template-card
                 layout: vertical
                 fill_container: true
                 primary: >-
-                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u =
-                  states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t
-                  = blocks | selectattr('max', 'ge', u) | first %}{% set hi =
-                  t.max if t is defined else 0 %}{% set disc = t.disc if t is
-                  defined else 0 %} {% set nx = blocks | selectattr('max', 'gt',
-                  hi) | first %}{% set nd = nx.disc if nx is defined else 0 %}
-                  {% if hi %}+RM {{ '%.2f' | format(hi * (nd - disc) / 100) }}{%
-                  else %}—{% endif %}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set raw = states('sensor.monthly_grid_kwh_usage') |
+                  float(0) -%}
+
+                  {%- set u = raw * k -%}
+
+                  {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+                  {%- set hi = tc.max if tc is defined else 0 -%}
+
+                  {%- set disc = tc.disc if tc is defined else 0 -%}
+
+                  {%- set nx = blocks | selectattr('max', 'gt', hi) | first -%}
+
+                  {%- set nd = nx.disc if nx is defined else 0 -%}
+
+                  {%- set step = hi * (nd - disc) / 100 if hi else 0 -%}
+
+                  {% if hi %}+RM {{ '%.2f' | format(step) }}{% else %}—{% endif
+                  %}
                 secondary: >-
-                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set u =
-                  states('sensor.monthly_grid_kwh_usage') | float(0) %} {% set t
-                  = blocks | selectattr('max', 'ge', u) | first %}{% set hi =
-                  t.max if t is defined else 0 %}{% set disc = t.disc if t is
-                  defined else 0 %} {% if hi %}if you pass {{ hi }} kWh{% else
-                  %}no more steps{% endif %}
-                icon: mdi:alert-outline
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set raw = states('sensor.monthly_grid_kwh_usage') |
+                  float(0) -%}
+
+                  {%- set u = raw * k -%}
+
+                  {%- set t = now() -%}
+
+                  {%- set s = (t.replace(day=15) if t.day >= 15 else
+                  (t.replace(day=1) -
+                  timedelta(days=1)).replace(day=15)).replace(hour=0, minute=0,
+                  second=0, microsecond=0) -%}
+
+                  {%- set n = ((s + timedelta(days=20)).replace(day=15) -
+                  s).days -%}
+
+                  {%- set el = (t - s).total_seconds() / 86400 -%}
+
+                  {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+                  {%- set hi = tc.max if tc is defined else 0 -%}
+
+                  {%- set disc = tc.disc if tc is defined else 0 -%}
+
+                  {%- set avg = u / el if el >= 1 else u -%}
+
+                  {%- set pu = u / el * n if el >= 1 else u -%}
+
+                  {%- set pc = blocks | selectattr('max', 'ge', pu) | first -%}
+
+                  {%- set pd = pc.disc if pc is defined else 0 -%}
+
+                  {%- set cross = hi > 0 and pu > hi -%}
+
+                  {%- if not hi -%}no more steps
+
+                  {%- elif el < 1 -%}if you pass {{ hi }} kWh
+
+                  {%- elif cross -%}hit ~{{ (t + timedelta(days=(hi - u) /
+                  avg)).strftime('%d %b') }} at this pace
+
+                  {%- elif hi - pu <= 5 -%}tight at this pace
+
+                  {%- else -%}safe at this pace
+
+                  {%- endif -%}
+                icon: >-
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
+                  'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
+                  'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set raw = states('sensor.monthly_grid_kwh_usage') |
+                  float(0) -%}
+
+                  {%- set u = raw * k -%}
+
+                  {%- set t = now() -%}
+
+                  {%- set s = (t.replace(day=15) if t.day >= 15 else
+                  (t.replace(day=1) -
+                  timedelta(days=1)).replace(day=15)).replace(hour=0, minute=0,
+                  second=0, microsecond=0) -%}
+
+                  {%- set n = ((s + timedelta(days=20)).replace(day=15) -
+                  s).days -%}
+
+                  {%- set el = (t - s).total_seconds() / 86400 -%}
+
+                  {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+                  {%- set hi = tc.max if tc is defined else 0 -%}
+
+                  {%- set disc = tc.disc if tc is defined else 0 -%}
+
+                  {%- set avg = u / el if el >= 1 else u -%}
+
+                  {%- set pu = u / el * n if el >= 1 else u -%}
+
+                  {%- set pc = blocks | selectattr('max', 'ge', pu) | first -%}
+
+                  {%- set pd = pc.disc if pc is defined else 0 -%}
+
+                  {%- set cross = hi > 0 and pu > hi -%}
+
+                  {{ 'mdi:alert-outline' if not hi or cross or hi - pu <= 5 else
+                  'mdi:check-circle-outline' }}
                 icon_color: >-
-                  {% set u = states('sensor.monthly_grid_kwh_usage') | float(0)
-                  %} {{ 'amber' if u <= 600 else 'disabled' }}
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
+                  'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
+                  'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set raw = states('sensor.monthly_grid_kwh_usage') |
+                  float(0) -%}
+
+                  {%- set u = raw * k -%}
+
+                  {%- set t = now() -%}
+
+                  {%- set s = (t.replace(day=15) if t.day >= 15 else
+                  (t.replace(day=1) -
+                  timedelta(days=1)).replace(day=15)).replace(hour=0, minute=0,
+                  second=0, microsecond=0) -%}
+
+                  {%- set n = ((s + timedelta(days=20)).replace(day=15) -
+                  s).days -%}
+
+                  {%- set el = (t - s).total_seconds() / 86400 -%}
+
+                  {%- set tc = blocks | selectattr('max', 'ge', u) | first -%}
+
+                  {%- set hi = tc.max if tc is defined else 0 -%}
+
+                  {%- set disc = tc.disc if tc is defined else 0 -%}
+
+                  {%- set avg = u / el if el >= 1 else u -%}
+
+                  {%- set pu = u / el * n if el >= 1 else u -%}
+
+                  {%- set pc = blocks | selectattr('max', 'ge', pu) | first -%}
+
+                  {%- set pd = pc.disc if pc is defined else 0 -%}
+
+                  {%- set cross = hi > 0 and pu > hi -%}
+
+                  {{ 'disabled' if not hi else 'red' if cross else 'amber' if hi
+                  - pu <= 5 else 'green' }}
               - type: custom:mushroom-template-card
                 layout: vertical
                 fill_container: true
                 primary: >-
-                  {% set base = 0.2703 + 0.0455 + 0.1285 %} {% set blocks =
-                  [{'max': 200, 'disc': -25.0}, {'max': 250, 'disc': -24.5},
-                  {'max': 300, 'disc': -22.5}, {'max': 350, 'disc': -21.0},
-                  {'max': 400, 'disc': -17.0}, {'max': 450, 'disc': -14.5},
-                  {'max': 500, 'disc': -12.0}, {'max': 550, 'disc': -10.5},
-                  {'max': 600, 'disc': -9.0}] %} {% set lp =
-                  state_attr('sensor.monthly_grid_kwh_usage', 'last_period')
-                  %}{% set lu = lp | float(0) %}{% set lt = blocks |
-                  selectattr('max', 'ge', lu) | first %}{% set ld = lt.disc if
-                  lt is defined else 0 %} {% if lp is not none %}RM {{ '%.2f' |
-                  format(lu * (base + ld / 100)) }}{% else %}—{% endif %}
-                secondary: >-
-                  {% set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  {%- set base = 0.2703 + 0.0455 + 0.1285 -%}
+
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
                   'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
                   'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
                   'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
-                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] %} {% set lp =
-                  state_attr('sensor.monthly_grid_kwh_usage', 'last_period')
-                  %}{% set lu = lp | float(0) %}{% set lt = blocks |
-                  selectattr('max', 'ge', lu) | first %}{% set ld = lt.disc if
-                  lt is defined else 0 %} {% if lp is not none %}last cycle · {{
-                  '%.2f' | format(lu) }} kWh{% else %}last cycle not found{%
-                  endif %}
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set lp = state_attr('sensor.monthly_grid_kwh_usage',
+                  'last_period') -%}
+
+                  {%- set lu = (lp | float(0)) * k -%}
+
+                  {%- set lt = blocks | selectattr('max', 'ge', lu) | first -%}
+
+                  {%- set ld = lt.disc if lt is defined else 0 -%}
+
+                  {% if lp is not none %}RM {{ '%.2f' | format(lu * (base + ld /
+                  100)) }}{% else %}—{% endif %}
+                secondary: >-
+                  {%- set blocks = [{'max': 200, 'disc': -25.0}, {'max': 250,
+                  'disc': -24.5}, {'max': 300, 'disc': -22.5}, {'max': 350,
+                  'disc': -21.0}, {'max': 400, 'disc': -17.0}, {'max': 450,
+                  'disc': -14.5}, {'max': 500, 'disc': -12.0}, {'max': 550,
+                  'disc': -10.5}, {'max': 600, 'disc': -9.0}] -%}
+
+                  {%- set k = 1.06 -%}
+
+                  {%- set lp = state_attr('sensor.monthly_grid_kwh_usage',
+                  'last_period') -%}
+
+                  {%- set lu = (lp | float(0)) * k -%}
+
+                  {%- set lt = blocks | selectattr('max', 'ge', lu) | first -%}
+
+                  {%- set ld = lt.disc if lt is defined else 0 -%}
+
+                  {% if lp is not none %}last cycle · {{ '%.1f' | format(lu) }}
+                  kWh{% else %}last cycle not found{% endif %}
                 icon: mdi:calendar-month-outline
                 icon_color: disabled
 
