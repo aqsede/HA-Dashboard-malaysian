@@ -853,17 +853,29 @@ views:
                   points: false
                   legend: false
                   labels: false
-              - type: custom:mushroom-climate-card
-                entity: climate.150633094438435_climate
-                name: Celest 2HP
-                show_temperature_control: true
-                collapsible_controls: true
-                hvac_modes:
-                  - false
-                  - cool
-                  - dry
-                  - fan_only
-                  - auto
+              # ── Replaced with Conditional Card ───────────────────────────
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.150633094438435_climate
+                    state:
+                      - "off"
+                      - "cool"
+                      - "dry"
+                      - "fan_only"
+                      - "auto"
+                card:
+                  type: custom:mushroom-climate-card
+                  entity: climate.150633094438435_climate
+                  name: Celest 2HP
+                  show_temperature_control: true
+                  collapsible_controls: true
+                  hvac_modes:
+                    - false
+                    - cool
+                    - dry
+                    - fan_only
+                    - auto
           - type: vertical-stack
             cards:
               - type: custom:mini-graph-card
@@ -934,7 +946,6 @@ views:
                   - dry
                   - fan_only
                   - auto
-
       # ── 4. KITCHEN ────────────────────────────────────────────────────────
       - type: grid
         cards:
