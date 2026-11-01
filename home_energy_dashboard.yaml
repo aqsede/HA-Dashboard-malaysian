@@ -921,9 +921,8 @@ views:
             columns: 2
             square: false
             cards:
-              # Server: tap = details, HOLD = toggle (so a stray tap can't power off the NAS)
               - type: custom:mushroom-template-card
-                entity: switch.living_room_tapo_home_server
+                entity: sensor.living_room_tapo_home_server_power
                 layout: vertical
                 fill_container: true
                 primary: Server
@@ -937,8 +936,6 @@ views:
                   else 'red' }}
                 tap_action:
                   action: more-info
-                hold_action:
-                  action: toggle
               - type: custom:mushroom-template-card
                 entity: switch.living_room_tapo_main_tv
                 layout: vertical
