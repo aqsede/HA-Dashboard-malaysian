@@ -932,7 +932,7 @@ views:
                 icon: mdi:server
                 icon_color: >-
                   {% set w = states('sensor.living_room_tapo_home_server_power') | float(0)
-                  %} {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500
+                  %} {{ 'disabled' if w < 1 else 'green' if w <= 15 else 'amber' if w <= 23
                   else 'red' }}
                 tap_action:
                   action: more-info
