@@ -442,7 +442,7 @@ views:
                     fill_container: true
                     tap_action:
                       action: more-info
-                    primary: >-
+                    primary: |-
                       {% set n = {
                         'sensor.fridge_fridge_power': 'Refrigerator',
                         'sensor.hisense_tugs_power': 'Hisense Aircond',
@@ -455,7 +455,7 @@ views:
                         'sensor.tapo_computer_plug_power_1': 'Computer',
                         'sensor.tapo_tv_plug_power_1': 'Bedroom TV',
                         'sensor.living_room_tapo_main_tv_power': 'Sharp TV',
-                        'sensor.entertainment_power': 'Media, Router & Ext.',
+                        'sensor.entertainment_power': 'Router & Ext.',
                         'sensor.water_heater_epower': 'Water Heater',
                         'sensor.microwave_epower': 'Microwave',
                         'sensor.washer_dryer_power': 'Washer Dryer',
@@ -464,9 +464,17 @@ views:
                         'sensor.kitchen_rice_cooker_power': 'Rice Cooker',
                         'sensor.living_room_game_console_power': 'PS5',
                         'input_number.lights_watt_baseline': 'Lights & Fans (est.)'
-                      } %} {{ n.get(entity, state_attr(entity, 'friendly_name'))
-                      }}
-                    secondary: '{{ states(entity) | float(0) | round(0) | int }} W'
+                      } %} {{ n.get(entity, state_attr(entity, 'friendly_name')) }}
+                    secondary: >-
+                      {% if entity == 'sensor.entertainment_power' %}
+                        {% set total = states('sensor.entertainment_power') | float(0) %}
+                        {% set server = states('sensor.living_room_tapo_home_server_power') | float(0) %}
+                        {% set tv = states('sensor.living_room_tapo_main_tv_power') | float(0) %}
+                        {% set ps5 = states('sensor.living_room_game_console_power') | float(0) %}
+                        {{ [0, total - (server + tv + ps5)] | max | round(0) | int }} W
+                      {% else %}
+                        {{ states(entity) | float(0) | round(0) | int }} W
+                      {% endif %}
                     icon: |-
                       {% set i = {
                         'sensor.fridge_fridge_power': 'mdi:fridge',
@@ -491,17 +499,23 @@ views:
                         'input_number.lights_watt_baseline': 'mdi:lightbulb-group'
                       } %} {{ i.get(entity, 'mdi:flash') }}
                     icon_color: >-
-                      {% set w = states(entity) | float(0) %} {{ 'disabled' if w
-                      < 1 else 'green' if w < 100 else 'amber' if w < 500 else
-                      'red' }}
-                # ...plus your estimated lights & fans (CT B baseline helper)
+                      {% if entity == 'sensor.entertainment_power' %}
+                        {% set total = states('sensor.entertainment_power') | float(0) %}
+                        {% set server = states('sensor.living_room_tapo_home_server_power') | float(0) %}
+                        {% set tv = states('sensor.living_room_tapo_main_tv_power') | float(0) %}
+                        {% set ps5 = states('sensor.living_room_game_console_power') | float(0) %}
+                        {% set w = [0, total - (server + tv + ps5)] | max %}
+                      {% else %}
+                        {% set w = states(entity) | float(0) %}
+                      {% endif %}
+                      {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
                 - entity_id: input_number.lights_watt_baseline
                   options:
                     type: custom:mushroom-template-card
                     fill_container: true
                     tap_action:
                       action: more-info
-                    primary: >-
+                    primary: |-
                       {% set n = {
                         'sensor.fridge_fridge_power': 'Refrigerator',
                         'sensor.hisense_tugs_power': 'Hisense Aircond',
@@ -514,7 +528,7 @@ views:
                         'sensor.tapo_computer_plug_power_1': 'Computer',
                         'sensor.tapo_tv_plug_power_1': 'Bedroom TV',
                         'sensor.living_room_tapo_main_tv_power': 'Sharp TV',
-                        'sensor.entertainment_power': 'Media, Router & Ext.',
+                        'sensor.entertainment_power': 'Router & Ext.',
                         'sensor.water_heater_epower': 'Water Heater',
                         'sensor.microwave_epower': 'Microwave',
                         'sensor.washer_dryer_power': 'Washer Dryer',
@@ -523,8 +537,7 @@ views:
                         'sensor.kitchen_rice_cooker_power': 'Rice Cooker',
                         'sensor.living_room_game_console_power': 'PS5',
                         'input_number.lights_watt_baseline': 'Lights & Fans (est.)'
-                      } %} {{ n.get(entity, state_attr(entity, 'friendly_name'))
-                      }}
+                      } %} {{ n.get(entity, state_attr(entity, 'friendly_name')) }}
                     secondary: '{{ states(entity) | float(0) | round(0) | int }} W'
                     icon: |-
                       {% set i = {
@@ -550,9 +563,8 @@ views:
                         'input_number.lights_watt_baseline': 'mdi:lightbulb-group'
                       } %} {{ i.get(entity, 'mdi:flash') }}
                     icon_color: >-
-                      {% set w = states(entity) | float(0) %} {{ 'disabled' if w
-                      < 1 else 'green' if w < 100 else 'amber' if w < 500 else
-                      'red' }}
+                      {% set w = states(entity) | float(0) %} {{ 'disabled' if w < 1 else
+                      'green' if w < 100 else 'amber' if w < 500 else 'red' }}
               exclude:
                 # Meters / helpers that aren't devices
                 - entity_id: sensor.energy_meter_main_ct_power
@@ -562,7 +574,7 @@ views:
                 # Duplicate of Midea Celest (living room)
                 - entity_id: sensor.150633094438435_realtime_power
                 # Excluded virtual/learning idle sensors
-                - entity_id: sensor.fridge_night_idle
+                - entity_id: sensor.fridge_night_idle_power
                 - entity_id: sensor.fridge_night_idle_median_30d
                 - state: unavailable
                 - state: unknown
@@ -916,13 +928,13 @@ views:
                 fill_container: true
                 primary: Server
                 secondary: >-
-                  {{ states('sensor.living_room_tapo_home_server_power') |
-                  float(0) | round(0) | int }} W
+                  {{ states('sensor.living_room_tapo_home_server_power') | float(0) |
+                  round(0) | int }} W
                 icon: mdi:server
                 icon_color: >-
-                  {% set w = states('sensor.living_room_tapo_home_server_power')
-                  | float(0) %} {{ 'disabled' if w < 1 else 'green' if w < 100
-                  else 'amber' if w < 500 else 'red' }}
+                  {% set w = states('sensor.living_room_tapo_home_server_power') | float(0)
+                  %} {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500
+                  else 'red' }}
                 tap_action:
                   action: more-info
                 hold_action:
@@ -933,13 +945,13 @@ views:
                 fill_container: true
                 primary: Sharp TV
                 secondary: >-
-                  {{ states('sensor.living_room_tapo_main_tv_power') | float(0)
-                  | round(0) | int }} W
+                  {{ states('sensor.living_room_tapo_main_tv_power') | float(0) | round(0) |
+                  int }} W
                 icon: mdi:television
                 icon_color: >-
-                  {% set w = states('sensor.living_room_tapo_main_tv_power') |
-                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w < 100
-                  else 'amber' if w < 500 else 'red' }}
+                  {% set w = states('sensor.living_room_tapo_main_tv_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500
+                  else 'red' }}
                 tap_action:
                   action: toggle
                 hold_action:
@@ -948,30 +960,38 @@ views:
                 entity: sensor.entertainment_power
                 layout: vertical
                 fill_container: true
-                primary: Media & Router
+                primary: Router & Ext.
                 secondary: >-
-                  {{ states('sensor.entertainment_power') | float(0) | round(0)
-                  | int }} W
+                  {% set total = states('sensor.entertainment_power') | float(0) %}
+                  {% set server = states('sensor.living_room_tapo_home_server_power') | float(0) %}
+                  {% set tv = states('sensor.living_room_tapo_main_tv_power') | float(0) %}
+                  {% set ps5 = states('sensor.living_room_game_console_power') | float(0) %}
+                  {{ [0, total - (server + tv + ps5)] | max | round(0) | int }} W
                 icon: mdi:router-wireless
                 icon_color: >-
-                  {% set w = states('sensor.entertainment_power') | float(0) %}
-                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if
-                  w < 500 else 'red' }}
+                  {% set total = states('sensor.entertainment_power') | float(0) %}
+                  {% set server = states('sensor.living_room_tapo_home_server_power') | float(0) %}
+                  {% set tv = states('sensor.living_room_tapo_main_tv_power') | float(0) %}
+                  {% set ps5 = states('sensor.living_room_game_console_power') | float(0) %}
+                  {% set w = [0, total - (server + tv + ps5)] | max %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
                 tap_action:
                   action: more-info
+                hold_action:
+                  action: none
               - type: custom:mushroom-template-card
-                entity: switch.living_room_game_console
+                entity: switch.1iving_room_game_console
                 layout: vertical
                 fill_container: true
                 primary: PS5
                 secondary: >-
-                  {{ states('sensor.living_room_game_console_power') | float(0)
-                  | round(0) | int }} W
+                  {{ states('sensor.living_room_game_console_power') | float(0) | round(0) |
+                  int }} W
                 icon: mdi:sony-playstation
                 icon_color: >-
-                  {% set w = states('sensor.living_room_game_console_power') |
-                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w < 100
-                  else 'amber' if w < 500 else 'red' }}
+                  {% set w = states('sensor.living_room_game_console_power') | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500
+                  else 'red' }}
                 tap_action:
                   action: toggle
                 hold_action:
@@ -1182,7 +1202,7 @@ views:
             name: Night idle · 90 days
             icon: mdi:fridge-outline
             entities:
-              - entity: sensor.fridge_night_idle
+              - entity: sensor.fridge_night_idle_power
                 name: Night idle
                 color: '#60a5fa'
               - entity: sensor.fridge_night_idle_median_30d
@@ -1244,7 +1264,7 @@ views:
                 title: Night idle W (daily) - 90 days
                 hours_to_show: 2160
                 entities:
-                  - sensor.fridge_night_idle
+                  - sensor.fridge_night_idle_power
                   - sensor.fridge_night_idle_median_30d
 
   
