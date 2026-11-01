@@ -508,7 +508,28 @@ views:
                       {% else %}
                         {% set w = states(entity) | float(0) %}
                       {% endif %}
-                      {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                      {% set limits = {
+                        'sensor.fridge_fridge_power': [80, 250],
+                        'sensor.hisense_tugs_power': [300, 900],
+                        'sensor.midea_celest_power': [700, 1900],
+                        'sensor.midea_all_easy_pro_power': [250, 800],
+                        'sensor.celest_bedroom_3_power': [300, 900],
+                        'sensor.coway_coway_power': [100, 470],
+                        'sensor.light_fan_light_fan_power': [100, 300],
+                        'sensor.living_room_tapo_home_server_power': [15, 23],
+                        'sensor.tapo_computer_plug_power_1': [60, 400],
+                        'sensor.tapo_tv_plug_power_1': [30, 100],
+                        'sensor.living_room_tapo_main_tv_power': [50, 180],
+                        'sensor.entertainment_power': [12, 25],
+                        'sensor.water_heater_epower': [1700, 3000],
+                        'sensor.microwave_epower': [400, 1600],
+                        'sensor.washer_dryer_power': [300, 2500],
+                        'sensor.kitchen_air_fryer_power': [500, 1800],
+                        'sensor.elba_hood_power': [80, 300],
+                        'sensor.kitchen_rice_cooker_power': [80, 900],
+                        'sensor.living_room_game_console_power': [70, 220]
+                      } %} {% set bounds = limits.get(entity, [100, 500]) %}
+                      {{ 'disabled' if w < 1 else 'green' if w <= bounds[0] else 'amber' if w <= bounds[1] else 'red' }}
                 - entity_id: input_number.lights_watt_baseline
                   options:
                     type: custom:mushroom-template-card
@@ -564,7 +585,7 @@ views:
                       } %} {{ i.get(entity, 'mdi:flash') }}
                     icon_color: >-
                       {% set w = states(entity) | float(0) %} {{ 'disabled' if w < 1 else
-                      'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                      'green' if w <= 100 else 'amber' if w <= 300 else 'red' }}
               exclude:
                 # Meters / helpers that aren't devices
                 - entity_id: sensor.energy_meter_main_ct_power
@@ -605,7 +626,7 @@ views:
                 color_thresholds:
                   - value: 0
                     color: '#4ade80'
-                  - value: 400
+                  - value: 300
                     color: '#fbbf24'
                   - value: 900
                     color: '#f87171'
@@ -668,9 +689,9 @@ views:
                 color_thresholds:
                   - value: 0
                     color: '#4ade80'
-                  - value: 400
+                  - value: 700
                     color: '#fbbf24'
-                  - value: 900
+                  - value: 1900
                     color: '#f87171'
                 show:
                   fill: fade
@@ -714,9 +735,9 @@ views:
                 color_thresholds:
                   - value: 0
                     color: '#4ade80'
-                  - value: 400
+                  - value: 250
                     color: '#fbbf24'
-                  - value: 900
+                  - value: 800
                     color: '#f87171'
                 show:
                   fill: fade
@@ -760,7 +781,7 @@ views:
                 color_thresholds:
                   - value: 0
                     color: '#4ade80'
-                  - value: 400
+                  - value: 300
                     color: '#fbbf24'
                   - value: 900
                     color: '#f87171'
@@ -818,8 +839,8 @@ views:
                 icon: mdi:fridge
                 icon_color: >-
                   {% set w = states('sensor.fridge_fridge_power') | float(0) %}
-                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if
-                  w < 500 else 'red' }}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 80 else 'amber' if
+                  w <= 250 else 'red' }}
                 tap_action:
                   action: more-info
               - type: custom:mushroom-template-card
@@ -833,8 +854,8 @@ views:
                 icon: mdi:air-purifier
                 icon_color: >-
                   {% set w = states('sensor.coway_coway_power') | float(0) %} {{
-                  'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w
-                  < 500 else 'red' }}
+                  'disabled' if w < 1 else 'green' if w <= 100 else 'amber' if w
+                  <= 470 else 'red' }}
                 tap_action:
                   action: toggle
                 hold_action:
@@ -850,8 +871,8 @@ views:
                 icon: mdi:air-fryer
                 icon_color: >-
                   {% set w = states('sensor.kitchen_air_fryer_power') | float(0)
-                  %} {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber'
-                  if w < 500 else 'red' }}
+                  %} {{ 'disabled' if w < 1 else 'green' if w <= 500 else 'amber'
+                  if w <= 1800 else 'red' }}
                 tap_action:
                   action: toggle
                 hold_action:
@@ -867,8 +888,8 @@ views:
                 icon: mdi:rice
                 icon_color: >-
                   {% set w = states('sensor.kitchen_rice_cooker_power') |
-                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w < 100
-                  else 'amber' if w < 500 else 'red' }}
+                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w <= 80
+                  else 'amber' if w <= 900 else 'red' }}
                 tap_action:
                   action: toggle
                 hold_action:
@@ -884,8 +905,8 @@ views:
                 icon: mdi:range-hood
                 icon_color: >-
                   {% set w = states('sensor.elba_hood_power') | float(0) %} {{
-                  'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w
-                  < 500 else 'red' }}
+                  'disabled' if w < 1 else 'green' if w <= 80 else 'amber' if w
+                  <= 300 else 'red' }}
                 tap_action:
                   action: toggle
                 hold_action:
@@ -901,8 +922,8 @@ views:
                 icon: mdi:microwave
                 icon_color: >-
                   {% set w = states('sensor.microwave_epower') | float(0) %} {{
-                  'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w
-                  < 500 else 'red' }}
+                  'disabled' if w < 1 else 'green' if w <= 400 else 'amber' if w
+                  <= 1600 else 'red' }}
                 tap_action:
                   action: more-info
 
@@ -947,7 +968,7 @@ views:
                 icon: mdi:television
                 icon_color: >-
                   {% set w = states('sensor.living_room_tapo_main_tv_power') | float(0) %}
-                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500
+                  {{ 'disabled' if w < 1 else 'green' if w <= 50 else 'amber' if w <= 180
                   else 'red' }}
                 tap_action:
                   action: toggle
@@ -971,7 +992,7 @@ views:
                   {% set tv = states('sensor.living_room_tapo_main_tv_power') | float(0) %}
                   {% set ps5 = states('sensor.living_room_game_console_power') | float(0) %}
                   {% set w = [0, total - (server + tv + ps5)] | max %}
-                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500 else 'red' }}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 12 else 'amber' if w <= 25 else 'red' }}
                 tap_action:
                   action: more-info
                 hold_action:
@@ -987,7 +1008,7 @@ views:
                 icon: mdi:sony-playstation
                 icon_color: >-
                   {% set w = states('sensor.living_room_game_console_power') | float(0) %}
-                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if w < 500
+                  {{ 'disabled' if w < 1 else 'green' if w <= 70 else 'amber' if w <= 220
                   else 'red' }}
                 tap_action:
                   action: toggle
@@ -1020,8 +1041,8 @@ views:
                 icon: mdi:desktop-tower-monitor
                 icon_color: >-
                   {% set w = states('sensor.tapo_computer_plug_power_1') |
-                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w < 100
-                  else 'amber' if w < 500 else 'red' }}
+                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w <= 60
+                  else 'amber' if w <= 400 else 'red' }}
                 tap_action:
                   action: toggle
                 hold_action:
@@ -1037,8 +1058,8 @@ views:
                 icon: mdi:television
                 icon_color: >-
                   {% set w = states('sensor.tapo_tv_plug_power_1') | float(0) %}
-                  {{ 'disabled' if w < 1 else 'green' if w < 100 else 'amber' if
-                  w < 500 else 'red' }}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 30 else 'amber' if
+                  w <= 100 else 'red' }}
                 tap_action:
                   action: toggle
                 hold_action:
@@ -1054,8 +1075,8 @@ views:
                 icon: mdi:ceiling-fan-light
                 icon_color: >-
                   {% set w = states('sensor.light_fan_light_fan_power') |
-                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w < 100
-                  else 'amber' if w < 500 else 'red' }}
+                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w <= 100
+                  else 'amber' if w <= 300 else 'red' }}
                 tap_action:
                   action: more-info
           - type: custom:mushroom-title-card
@@ -1076,8 +1097,8 @@ views:
                 icon: mdi:washing-machine
                 icon_color: >-
                   {% set w = states('sensor.washer_dryer_power') | float(0) %}
-                  {{ 'disabled' if w < 5 else 'green' if w < 100 else 'amber' if
-                  w < 800 else 'red' }}
+                  {{ 'disabled' if w < 5 else 'green' if w <= 300 else 'amber' if
+                  w <= 2500 else 'red' }}
                 tap_action:
                   action: more-info
               - type: custom:mushroom-template-card
@@ -1091,7 +1112,8 @@ views:
                 icon: mdi:water-boiler
                 icon_color: >-
                   {% set w = states('sensor.water_heater_epower') | float(0) %}
-                  {{ 'disabled' if w < 1 else 'red' }}
+                  {{ 'disabled' if w < 1 else 'green' if w < 1700 else 'amber' if
+                  w <= 3000 else 'red' }}
                 tap_action:
                   action: more-info
               - type: custom:mushroom-template-card
@@ -1105,8 +1127,8 @@ views:
                 icon: mdi:lightbulb-group
                 icon_color: >-
                   {% set w = states('input_number.lights_watt_baseline') |
-                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w < 100
-                  else 'amber' if w < 500 else 'red' }}
+                  float(0) %} {{ 'disabled' if w < 1 else 'green' if w <= 100
+                  else 'amber' if w <= 300 else 'red' }}
                 tap_action:
                   action: more-info
       - type: grid
