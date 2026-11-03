@@ -615,9 +615,11 @@ views:
                 - entity_id: sensor.lights_ctb_net_power
                 # Duplicate of Midea Celest (living room)
                 - entity_id: sensor.150633094438435_realtime_power
-                # Excluded virtual/learning idle sensors
-                - entity_id: sensor.fridge_night_idle_power
-                - entity_id: sensor.fridge_night_idle_median_30d
+                # Excluded virtual/learning fridge sensors (v3 names)
+                - entity_id: sensor.fridge_power_1h
+                - entity_id: sensor.fridge_idle_floor
+                - entity_id: sensor.fridge_idle_floor_24h
+                - entity_id: sensor.fridge_idle_floor_median_30d
                 - state: unavailable
                 - state: unknown
                 - state: < 1
@@ -1272,7 +1274,7 @@ views:
         cards:
           - type: custom:mushroom-title-card
             title: Fridge health
-            subtitle: Night idle vs your best-ever baseline
+            subtitle: Idle floor vs your best-ever baseline
           - type: custom:mushroom-template-card
             entity: sensor.fridge_health_status
             layout: horizontal
@@ -1283,7 +1285,9 @@ views:
               {{ (states('sensor.fridge_health_status') | replace('_', ' ') |
               title) if has_value('sensor.fridge_health_status') else 'No data' }}
             secondary: >-
-              {% if has_value('sensor.fridge_idle_drift') %}drift {{
+              {% if states('sensor.fridge_health_status') == 'learning' %}learning · {{
+              states('sensor.fridge_idle_floor_samples_30d') | int(0) }}/7 days{%
+              elif has_value('sensor.fridge_idle_drift') %}drift {{
               states('sensor.fridge_idle_drift') | float(0) | round(1) }} {{
               state_attr('sensor.fridge_idle_drift', 'unit_of_measurement') or
               '' }} from best{% else %}drift unavailable{% endif %}{% if
@@ -1291,40 +1295,54 @@ views:
               states('sensor.fridge_health_score') }}{% endif %}
             icon: >-
               {% if has_value('sensor.fridge_idle_drift') and
-              states('sensor.fridge_idle_drift') | float(0) >= 25
+              states('sensor.fridge_idle_drift') | float(0) >= 32
               %}mdi:fridge-alert{% else %}mdi:fridge{% endif %}
             icon_color: >-
               {% if not has_value('sensor.fridge_idle_drift') %}disabled{% else
               %}{% set d = states('sensor.fridge_idle_drift') | float(0) %}{{
-              'green' if d < 12 else 'amber' if d < 25 else 'red' }}{% endif %}
+              'green' if d < 20 else 'amber' if d < 32 else 'red' }}{% endif %}
           - type: grid
             columns: 2
             square: false
             cards:
               - type: custom:mushroom-template-card
-                entity: sensor.fridge_night_idle_median_30d
+                entity: sensor.fridge_idle_floor_median_30d
                 layout: vertical
                 fill_container: true
                 primary: >-
                   {% if has_value(entity) %}{{ states(entity) | float(0) |
                   round(1) }} {{ state_attr(entity, 'unit_of_measurement') or
                   'W' }}{% else %}—{% endif %}
-                secondary: Night idle · 30d median
-                icon: mdi:weather-night
+                secondary: Idle floor · 30d median
+                icon: mdi:gauge-low
                 icon_color: blue
                 tap_action:
                   action: more-info
               - type: custom:mushroom-template-card
-                entity: input_number.fridge_base_night_w
+                entity: input_number.fridge_base_idle_w
                 layout: vertical
                 fill_container: true
                 primary: >-
                   {% if has_value(entity) %}{{ states(entity) | float(0) |
                   round(1) }} {{ state_attr(entity, 'unit_of_measurement') or
                   'W' }}{% else %}—{% endif %}
-                secondary: Best-ever night idle
+                secondary: Best-ever idle floor
                 icon: mdi:trophy-outline
                 icon_color: green
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.fridge_power_1h
+                layout: vertical
+                fill_container: true
+                primary: >-
+                  {% if has_value(entity) %}{{ states(entity) | float(0) |
+                  round(0) | int }} W{% else %}—{% endif %}
+                secondary: >-
+                  {% if is_state('binary_sensor.fridge_sustained_high_load', 'on') %}Working hard · 1h avg{% else %}Now · 1h avg{% endif %}
+                icon: mdi:flash-outline
+                icon_color: >-
+                  {% if is_state('binary_sensor.fridge_sustained_high_load', 'on') %}red{% elif not has_value(entity) %}disabled{% else %}green{% endif %}
                 tap_action:
                   action: more-info
               - type: custom:mushroom-template-card
@@ -1336,7 +1354,7 @@ views:
                   round(1) }} {{ state_attr(entity, 'unit_of_measurement') or
                   '' }}{% else %}—{% endif %}
                 secondary: Typical day · 30d
-                icon: mdi:flash-outline
+                icon: mdi:calendar-today
                 icon_color: amber
                 tap_action:
                   action: more-info
@@ -1355,17 +1373,17 @@ views:
                 tap_action:
                   action: more-info
           - type: custom:mini-graph-card
-            name: Night idle · 90 days
+            name: Idle floor · 90 days
             icon: mdi:fridge-outline
             entities:
-              - entity: sensor.fridge_night_idle_power
-                name: Night idle
+              - entity: sensor.fridge_idle_floor
+                name: Daily floor
                 color: '#60a5fa'
-              - entity: sensor.fridge_night_idle_median_30d
+              - entity: sensor.fridge_idle_floor_median_30d
                 name: 30d median
                 color: '#fbbf24'
                 show_fill: false
-              - entity: input_number.fridge_base_night_w
+              - entity: input_number.fridge_base_idle_w
                 name: Best
                 color: '#4ade80'
                 show_fill: false
@@ -1390,7 +1408,7 @@ views:
             heading: New section
           - type: vertical-stack
             cards:
-              - type: conditional                 # learning banner (first ~14 nights)
+              - type: conditional                 # learning banner (first week)
                 conditions:
                   - condition: state
                     entity: sensor.fridge_health_status
@@ -1398,7 +1416,7 @@ views:
                 card:
                   type: markdown
                   content: >
-                    Learning your fridge's normal: **{{ states('sensor.fridge_night_samples_30d') | int(0) }} / 14** nights collected.
+                    Learning your fridge's normal: **{{ states('sensor.fridge_idle_floor_samples_30d') | int(0) }} / 7** daily samples collected.
               - type: conditional                 # gauge appears once there is enough data
                 conditions:
                   - condition: state
@@ -1409,26 +1427,27 @@ views:
                   entity: sensor.fridge_idle_drift
                   name: Fridge idle vs best
                   min: 0
-                  max: 40
+                  max: 50
                   needle: true
                   segments:
                     - {from: 0, color: "#43a047"}
-                    - {from: 12, color: "#fb8c00"}
-                    - {from: 25, color: "#e53935"}
+                    - {from: 20, color: "#fb8c00"}
+                    - {from: 32, color: "#e53935"}
               - type: entities
                 entities:
                   - {entity: sensor.fridge_health_status, name: Status}
                   - {entity: sensor.fridge_health_score, name: Health score}
-                  - {entity: sensor.fridge_night_idle_median_30d, name: Night idle (30d median)}
-                  - {entity: input_number.fridge_base_night_w, name: Best-ever baseline}
-                  - {entity: sensor.fridge_energy_median_30d, name: Typical day (grocery days ignored)}
+                  - {entity: sensor.fridge_idle_floor_median_30d, name: Idle floor (30d median)}
+                  - {entity: input_number.fridge_base_idle_w, name: Best-ever baseline}
+                  - {entity: sensor.fridge_power_1h, name: Power now (1h avg)}
+                  - {entity: sensor.fridge_energy_median_30d, name: Typical day (grocery days shrugged off)}
                   - {entity: sensor.fridge_grocery_days_30d, name: Heavy/grocery days (30d)}
               - type: history-graph
-                title: Night idle W (daily) - 90 days
+                title: Idle floor (daily) - 90 days
                 hours_to_show: 2160
                 entities:
-                  - sensor.fridge_night_idle_power
-                  - sensor.fridge_night_idle_median_30d
+                  - sensor.fridge_idle_floor
+                  - sensor.fridge_idle_floor_median_30d
 
   
   # ═══════════════════════════════════════════════════════════════════════════
