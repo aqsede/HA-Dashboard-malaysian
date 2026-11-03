@@ -55,6 +55,22 @@ views:
                 content: >-
                   {{ 'Microwave' if states('sensor.microwave_epower')|float(0) >
                   0 else '' }}
+              - type: template
+                icon: >-
+                  {%- set n = expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_2_light_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
+                  {{ 'mdi:lightbulb-on' if n > 0 else '' }}
+                icon_color: yellow
+                content: >-
+                  {%- set n = expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_2_light_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
+                  {{ (n ~ (' lights' if n > 1 else ' light') ~ ' on') if n > 0 else '' }}
+              - type: template
+                icon: >-
+                  {%- set n = expand(['sensor.virtual_bedroom_1_fan_power', 'sensor.virtual_bedroom_2_fan_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
+                  {{ 'mdi:fan' if n > 0 else '' }}
+                icon_color: cyan
+                content: >-
+                  {%- set n = expand(['sensor.virtual_bedroom_1_fan_power', 'sensor.virtual_bedroom_2_fan_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
+                  {{ (n ~ (' fans' if n > 1 else ' fan') ~ ' on') if n > 0 else '' }}
 
           # Hero: whole-house watts + 24h sparkline, colour changes with load
           - type: custom:mini-graph-card
@@ -592,6 +608,11 @@ views:
                 - entity_id: sensor.energy_meter_lights_ctb_power
                 - entity_id: sensor.shelly_ct_b_remaining_power
                 - entity_id: sensor.shelly_ct_b_snapshot
+                # Virtual light/fan sensors + the CT B net signal. They are a breakdown of
+                # "Bed2 · Lights & Fan" and "Lights & Fans (est.)", so listing them here
+                # would double-count. They have their own "Lights & fans" section below.
+                - entity_id: sensor.virtual_*
+                - entity_id: sensor.lights_ctb_net_power
                 # Duplicate of Midea Celest (living room)
                 - entity_id: sensor.150633094438435_realtime_power
                 # Excluded virtual/learning idle sensors
@@ -1131,6 +1152,122 @@ views:
                   else 'amber' if w <= 300 else 'red' }}
                 tap_action:
                   action: more-info
+      # ── 7. LIGHTS & FANS (virtual, self-learning) ─────────────────────────
+      # No meter behind these wall switches. The wattage is LEARNED from the power
+      # step each time the switch toggles (packages/virtual_lights.yaml), then shown
+      # while the switch is on. Sensors with < 5 samples show "learning n/5".
+      # Bedroom 2 fan is live: its PM-mini meter minus the Bedroom 2 light.
+      - type: grid
+        cards:
+          - type: custom:mushroom-title-card
+            title: Lights & fans
+            subtitle: Self-learned from the power step when a switch toggles
+          - type: custom:mushroom-chips-card
+            alignment: start
+            chips:
+              - type: template
+                entity: input_boolean.lw_debug
+                icon: mdi:bug-outline
+                content: Learner log
+                icon_color: '{{ ''blue'' if is_state(entity, ''on'') else ''disabled'' }}'
+                tap_action:
+                  action: toggle
+          - type: custom:mushroom-title-card
+            title: Bedroom 1
+            subtitle: >-
+              {{ expand([
+                'sensor.virtual_bedroom_1_main_light_power',
+                'sensor.virtual_bedroom_1_secondary_light_power',
+                'sensor.virtual_bedroom_1_fan_power'
+              ]) | map(attribute='state') | map('float', 0) | sum | round(0) |
+              int }} W now
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_1_main_light_power
+                layout: vertical
+                fill_container: true
+                primary: Main Light
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}learning…{% else %}{{ states(entity) | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-light
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_1_secondary_light_power
+                layout: vertical
+                fill_container: true
+                primary: Secondary Light
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}learning…{% else %}{{ states(entity) | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:lightbulb
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_1_fan_power
+                layout: vertical
+                fill_container: true
+                primary: Fan
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}learning…{% else %}{{ states(entity) | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-fan
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}
+                tap_action:
+                  action: more-info
+          - type: custom:mushroom-title-card
+            title: Bedroom 2
+            subtitle: >-
+              {{ expand([
+                'sensor.virtual_bedroom_2_light_power',
+                'sensor.virtual_bedroom_2_fan_power'
+              ]) | map(attribute='state') | map('float', 0) | sum | round(0) |
+              int }} W now
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_2_light_power
+                layout: vertical
+                fill_container: true
+                primary: Light
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}learning…{% else %}{{ states(entity) | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-light
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_2_fan_power
+                layout: vertical
+                fill_container: true
+                primary: Fan
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}waiting for light{% else %}{{ states(entity) | float(0) | round(0) | int }} W (live){% endif %}
+                icon: mdi:ceiling-fan
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}
+                tap_action:
+                  action: more-info
+
       - type: grid
         cards:
           - type: custom:mushroom-title-card
@@ -1670,6 +1807,41 @@ views:
               - entity: sensor.washer_dryer_power
                 name: Washer/dryer
                 color: '#0d9488'
+            grid_options:
+              columns: full
+
+      - type: grid
+        cards:
+          - type: custom:mini-graph-card
+            name: Lights & fans (virtual) · 24 h
+            icon: mdi:ceiling-light
+            hours_to_show: 24
+            points_per_hour: 4
+            height: 150
+            line_width: 2
+            smoothing: false  # on/off step loads: smoothing would draw ramps that never happened
+            show:
+              legend: true
+              fill: false
+              labels: false
+              points: false
+              state: false
+            entities:
+              - entity: sensor.virtual_bedroom_1_main_light_power
+                name: B1 main
+                color: '#fbbf24'
+              - entity: sensor.virtual_bedroom_1_secondary_light_power
+                name: B1 secondary
+                color: '#f59e0b'
+              - entity: sensor.virtual_bedroom_1_fan_power
+                name: B1 fan
+                color: '#2dd4bf'
+              - entity: sensor.virtual_bedroom_2_light_power
+                name: B2 light
+                color: '#f472b6'
+              - entity: sensor.virtual_bedroom_2_fan_power
+                name: B2 fan
+                color: '#a78bfa'
             grid_options:
               columns: full
 
