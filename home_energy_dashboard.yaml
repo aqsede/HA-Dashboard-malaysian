@@ -1021,7 +1021,7 @@ views:
                 hold_action:
                   action: none
               - type: custom:mushroom-template-card
-                entity: switch.1iving_room_game_console
+                entity: switch.living_room_game_console
                 layout: vertical
                 fill_container: true
                 primary: PS5
