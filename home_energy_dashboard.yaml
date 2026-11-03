@@ -1832,7 +1832,7 @@ views:
       - type: grid
         cards:
           - type: custom:mini-graph-card
-            name: Lights & fans (virtual) · 24 h
+            name: Lights (est.) · 24 h
             icon: mdi:ceiling-light
             hours_to_show: 24
             points_per_hour: 4
@@ -1852,12 +1852,32 @@ views:
               - entity: sensor.virtual_bedroom_1_secondary_light_power
                 name: B1 secondary
                 color: '#f59e0b'
-              - entity: sensor.virtual_bedroom_1_fan_power
-                name: B1 fan
-                color: '#2dd4bf'
               - entity: sensor.virtual_bedroom_2_light_power
                 name: B2 light
                 color: '#f472b6'
+            grid_options:
+              columns: full
+
+      - type: grid
+        cards:
+          - type: custom:mini-graph-card
+            name: Fans (est.) · 24 h
+            icon: mdi:ceiling-fan
+            hours_to_show: 24
+            points_per_hour: 4
+            height: 150
+            line_width: 2
+            smoothing: false  # on/off step loads: smoothing would draw ramps that never happened
+            show:
+              legend: true
+              fill: false
+              labels: false
+              points: false
+              state: false
+            entities:
+              - entity: sensor.virtual_bedroom_1_fan_power
+                name: B1 fan
+                color: '#2dd4bf'
               - entity: sensor.virtual_bedroom_2_fan_power
                 name: B2 fan
                 color: '#a78bfa'
