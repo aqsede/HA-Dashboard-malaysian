@@ -57,19 +57,19 @@ views:
                   0 else '' }}
               - type: template
                 icon: >-
-                  {%- set n = expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_2_light_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
+                  {%- set n = expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_2_light_power', 'sensor.virtual_living_room_top_light_power', 'sensor.virtual_living_room_bottom_light_power', 'sensor.virtual_living_room_balcony_light_power', 'sensor.virtual_living_room_hallway_light_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
                   {{ 'mdi:lightbulb-on' if n > 0 else '' }}
                 icon_color: yellow
                 content: >-
-                  {%- set n = expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_2_light_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
+                  {%- set n = expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_2_light_power', 'sensor.virtual_living_room_top_light_power', 'sensor.virtual_living_room_bottom_light_power', 'sensor.virtual_living_room_balcony_light_power', 'sensor.virtual_living_room_hallway_light_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
                   {{ (n ~ (' lights' if n > 1 else ' light') ~ ' on') if n > 0 else '' }}
               - type: template
                 icon: >-
-                  {%- set n = expand(['sensor.virtual_bedroom_1_fan_power', 'sensor.virtual_bedroom_2_fan_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
+                  {%- set n = expand(['sensor.virtual_bedroom_1_fan_power', 'sensor.virtual_bedroom_2_fan_power', 'sensor.virtual_living_room_fan_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
                   {{ 'mdi:fan' if n > 0 else '' }}
                 icon_color: cyan
                 content: >-
-                  {%- set n = expand(['sensor.virtual_bedroom_1_fan_power', 'sensor.virtual_bedroom_2_fan_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
+                  {%- set n = expand(['sensor.virtual_bedroom_1_fan_power', 'sensor.virtual_bedroom_2_fan_power', 'sensor.virtual_living_room_fan_power']) | map(attribute='state') | map('float', 0) | select('gt', 0) | list | length -%}
                   {{ (n ~ (' fans' if n > 1 else ' fan') ~ ' on') if n > 0 else '' }}
 
           # Hero: whole-house watts + 24h sparkline, colour changes with load
@@ -1269,6 +1269,91 @@ views:
                   {{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}
                 tap_action:
                   action: more-info
+          - type: custom:mushroom-title-card
+            title: Living room
+            subtitle: >-
+              {{ expand([
+                'sensor.virtual_living_room_top_light_power',
+                'sensor.virtual_living_room_bottom_light_power',
+                'sensor.virtual_living_room_fan_power',
+                'sensor.virtual_living_room_balcony_light_power',
+                'sensor.virtual_living_room_hallway_light_power'
+              ]) | map(attribute='state') | map('float', 0) | sum | round(0) |
+              int }} W now
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_top_light_power
+                layout: vertical
+                fill_container: true
+                primary: Top Light
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}learning…{% else %}{{ states(entity) | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-light
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_bottom_light_power
+                layout: vertical
+                fill_container: true
+                primary: Bottom Light
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}learning…{% else %}{{ states(entity) | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:lightbulb
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_fan_power
+                layout: vertical
+                fill_container: true
+                primary: Fan
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}learning…{% else %}{{ states(entity) | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-fan
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_balcony_light_power
+                layout: vertical
+                fill_container: true
+                primary: Balcony Light
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}learning…{% else %}{{ states(entity) | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:balcony
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_hallway_light_power
+                layout: vertical
+                fill_container: true
+                primary: Hallway Light
+                secondary: >-
+                  {%- set n = state_attr(entity, 'samples') | int(0) -%}
+                  {% if not has_value(entity) %}learning…{% else %}{{ states(entity) | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:wall-sconce
+                icon_color: >-
+                  {% set w = states(entity) | float(0) %}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}
+                tap_action:
+                  action: more-info
 
       - type: grid
         cards:
@@ -1855,6 +1940,18 @@ views:
               - entity: sensor.virtual_bedroom_2_light_power
                 name: B2 light
                 color: '#f472b6'
+              - entity: sensor.virtual_living_room_top_light_power
+                name: LR top
+                color: '#60a5fa'
+              - entity: sensor.virtual_living_room_bottom_light_power
+                name: LR bottom
+                color: '#34d399'
+              - entity: sensor.virtual_living_room_balcony_light_power
+                name: LR balcony
+                color: '#fb923c'
+              - entity: sensor.virtual_living_room_hallway_light_power
+                name: LR hallway
+                color: '#c084fc'
             grid_options:
               columns: full
 
@@ -1881,6 +1978,9 @@ views:
               - entity: sensor.virtual_bedroom_2_fan_power
                 name: B2 fan
                 color: '#a78bfa'
+              - entity: sensor.virtual_living_room_fan_power
+                name: LR fan
+                color: '#38bdf8'
             grid_options:
               columns: full
 
