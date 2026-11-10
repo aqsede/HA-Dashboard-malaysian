@@ -1,5 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Home Energy dashboard — rebuilt 2026-11-10  (Sections view, latest HA)
+# Home Energy dashboard v3 — v2 reconciled against the live entity list + energy tree (2026-11-10)
+# v3 changes: fridge health card no longer depends on 5 sensors that don't exist
+#   (fridge_health_status / _health_score / _idle_drift / _idle_floor_samples_30d / _grocery_days_30d);
+#   Iron tile added (Bedroom 1) + labelled in Top consumers; Top-consumers excludes hardened.
 # Install: Settings → Dashboards → Add dashboard → open it → ⋮ → Edit → ⋮ →
 #          Raw configuration editor → paste this whole file → Save.
 #
@@ -188,6 +191,7 @@ views:
                         'sensor.kitchen_air_fryer_power': 'Air Fryer',
                         'sensor.elba_hood_power': 'Elba Hood',
                         'sensor.kitchen_rice_cooker_power': 'Rice Cooker',
+                        'sensor.bedroom_iron_power': 'Iron',
                         'sensor.living_room_game_console_power': 'PS5',
                         'input_number.lights_watt_baseline': 'Lights & Fans (est.)'
                       } -%}
@@ -215,6 +219,7 @@ views:
                         'sensor.kitchen_air_fryer_power': 'mdi:air-fryer',
                         'sensor.elba_hood_power': 'mdi:range-hood',
                         'sensor.kitchen_rice_cooker_power': 'mdi:rice',
+                        'sensor.bedroom_iron_power': 'mdi:iron',
                         'sensor.living_room_game_console_power': 'mdi:sony-playstation',
                         'input_number.lights_watt_baseline': 'mdi:lightbulb-group'
                       } -%}
@@ -239,6 +244,7 @@ views:
                         'sensor.kitchen_air_fryer_power': [500, 1800],
                         'sensor.elba_hood_power': [80, 300],
                         'sensor.kitchen_rice_cooker_power': [80, 900],
+                        'sensor.bedroom_iron_power': [800, 1800],
                         'sensor.living_room_game_console_power': [70, 220],
                         'input_number.lights_watt_baseline': [100, 300]
                       } -%}
@@ -269,6 +275,7 @@ views:
                         'sensor.kitchen_air_fryer_power': 'Air Fryer',
                         'sensor.elba_hood_power': 'Elba Hood',
                         'sensor.kitchen_rice_cooker_power': 'Rice Cooker',
+                        'sensor.bedroom_iron_power': 'Iron',
                         'sensor.living_room_game_console_power': 'PS5',
                         'input_number.lights_watt_baseline': 'Lights & Fans (est.)'
                       } -%}
@@ -296,6 +303,7 @@ views:
                         'sensor.kitchen_air_fryer_power': 'mdi:air-fryer',
                         'sensor.elba_hood_power': 'mdi:range-hood',
                         'sensor.kitchen_rice_cooker_power': 'mdi:rice',
+                        'sensor.bedroom_iron_power': 'mdi:iron',
                         'sensor.living_room_game_console_power': 'mdi:sony-playstation',
                         'input_number.lights_watt_baseline': 'mdi:lightbulb-group'
                       } -%}
@@ -320,6 +328,7 @@ views:
                         'sensor.kitchen_air_fryer_power': [500, 1800],
                         'sensor.elba_hood_power': [80, 300],
                         'sensor.kitchen_rice_cooker_power': [80, 900],
+                        'sensor.bedroom_iron_power': [800, 1800],
                         'sensor.living_room_game_console_power': [70, 220],
                         'input_number.lights_watt_baseline': [100, 300]
                       } -%}
@@ -339,6 +348,10 @@ views:
                 # Duplicate of Midea Celest (living room)
                 - entity_id: sensor.150633094438435_realtime_power
                 # Fridge learning helpers
+                - entity_id: sensor.fridge_night_idle
+                - entity_id: sensor.fridge_night_idle_power
+                # Not a device (currently unknown; would show as a 2nd 'Fridge' if it comes alive)
+                - entity_id: sensor.all_standby_power
                 - entity_id: sensor.fridge_power_1h
                 - entity_id: sensor.fridge_idle_floor
                 - entity_id: sensor.fridge_idle_floor_24h
@@ -501,39 +514,57 @@ views:
           - type: custom:mushroom-title-card
             title: Fridge health
             subtitle: Idle floor vs your best-ever baseline
+          # Drift is computed here (24h idle floor minus best-ever floor) because
+          # sensor.fridge_health_status / _score / _idle_drift do not exist in this HA.
           - type: custom:mushroom-template-card
-            entity: sensor.fridge_health_status
+            entity: sensor.fridge_idle_floor_24h
             layout: horizontal
             fill_container: true
             tap_action:
               action: more-info
-            primary: "{{ (states('sensor.fridge_health_status') | replace('_', ' ') | title) if has_value('sensor.fridge_health_status') else 'No data' }}"
+            primary: |-
+              {%- if has_value('sensor.fridge_idle_floor_24h') and has_value('input_number.fridge_base_idle_w') -%}
+              {%- set d = [states('sensor.fridge_idle_floor_24h') | float(0) - states('input_number.fridge_base_idle_w') | float(0), 0] | max -%}
+              {{ 'Healthy' if d < 20 else 'Watch' if d < 32 else 'Check fridge' }}
+              {%- else -%}No data{%- endif -%}
             secondary: |-
-              {% if states('sensor.fridge_health_status') == 'learning' %}learning · {{ states('sensor.fridge_idle_floor_samples_30d') | int(0) }}/7 days{%
-              elif has_value('sensor.fridge_idle_drift') %}drift {{ states('sensor.fridge_idle_drift') | float(0) | round(1) }} {{ state_attr('sensor.fridge_idle_drift', 'unit_of_measurement') or '' }} from best{% else %}drift unavailable{% endif %}{% if has_value('sensor.fridge_health_score') %} · score {{ states('sensor.fridge_health_score') }}{% endif %}
-            icon: "{% if has_value('sensor.fridge_idle_drift') and states('sensor.fridge_idle_drift') | float(0) >= 32 %}mdi:fridge-alert{% else %}mdi:fridge{% endif %}"
-            icon_color: "{% if not has_value('sensor.fridge_idle_drift') %}disabled{% else %}{% set d = states('sensor.fridge_idle_drift') | float(0) %}{{ 'green' if d < 20 else 'amber' if d < 32 else 'red' }}{% endif %}"
+              {%- if has_value('sensor.fridge_idle_floor_24h') and has_value('input_number.fridge_base_idle_w') -%}
+              {%- set f = states('sensor.fridge_idle_floor_24h') | float(0) -%}
+              {%- set d = [f - states('input_number.fridge_base_idle_w') | float(0), 0] | max -%}
+              {{ f | round(0) | int }} W idle floor · +{{ d | round(1) }} W vs best{% if is_state('binary_sensor.fridge_sustained_high_load', 'on') %} · working hard{% endif %}
+              {%- else -%}Idle floor unavailable{%- endif -%}
+            icon: |-
+              {%- set d = states('sensor.fridge_idle_floor_24h') | float(0) - states('input_number.fridge_base_idle_w') | float(0) -%}
+              {{ 'mdi:fridge-alert' if has_value('sensor.fridge_idle_floor_24h') and d >= 32 else 'mdi:fridge' }}
+            icon_color: |-
+              {%- if not (has_value('sensor.fridge_idle_floor_24h') and has_value('input_number.fridge_base_idle_w')) -%}disabled
+              {%- else -%}
+              {%- set d = states('sensor.fridge_idle_floor_24h') | float(0) - states('input_number.fridge_base_idle_w') | float(0) -%}
+              {{ 'green' if d < 20 else 'amber' if d < 32 else 'red' }}
+              {%- endif -%}
+          # Core gauge cannot take a template, so segments are absolute watts:
+          # best-ever floor is ~50 W, so amber starts at best+20 (70 W) and red at best+32 (82 W).
+          # Re-tune if input_number.fridge_base_idle_w moves a lot.
           - type: conditional
             conditions:
               - condition: state
-                entity: sensor.fridge_health_status
+                entity: sensor.fridge_idle_floor_24h
                 state_not:
-                  - learning
                   - unavailable
                   - unknown
             card:
               type: gauge
-              entity: sensor.fridge_idle_drift
-              name: Idle drift from best
-              min: 0
-              max: 50
+              entity: sensor.fridge_idle_floor_24h
+              name: Idle floor · 24 h
+              min: 30
+              max: 100
               needle: true
               segments:
-                - from: 0
+                - from: 30
                   color: '#43a047'
-                - from: 20
+                - from: 70
                   color: '#fb8c00'
-                - from: 32
+                - from: 82
                   color: '#e53935'
           - type: grid
             columns: 2
@@ -580,13 +611,13 @@ views:
                 tap_action:
                   action: more-info
               - type: custom:mushroom-template-card
-                entity: sensor.fridge_grocery_days_30d
+                entity: sensor.fridge_energy_yesterday
                 layout: vertical
                 fill_container: true
-                primary: '{% if has_value(entity) %}{{ states(entity) | int(0) }}{% else %}—{% endif %}'
-                secondary: Grocery days · 30d
-                icon: mdi:cart-outline
-                icon_color: "{{ 'disabled' if not has_value(entity) else 'green' if states(entity) | int(0) <= 3 else 'amber' }}"
+                primary: "{% if has_value(entity) %}{{ states(entity) | float(0) | round(2) }} {{ state_attr(entity, 'unit_of_measurement') or 'kWh' }}{% else %}—{% endif %}"
+                secondary: Yesterday
+                icon: mdi:calendar-arrow-left
+                icon_color: "{% set m = states('sensor.fridge_energy_median_30d') | float(0) %}{% set y = states(entity) | float(0) %}{{ 'disabled' if not has_value(entity) else 'green' if (m == 0 or y <= m * 1.15) else 'amber' }}"
                 tap_action:
                   action: more-info
           - type: custom:mini-graph-card
@@ -744,7 +775,7 @@ views:
         cards:
           - type: custom:mushroom-title-card
             title: Bedroom 1
-            subtitle: "{{ expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_1_fan_power']) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W now"
+            subtitle: "{{ expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_1_fan_power', 'sensor.bedroom_iron_power']) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W now"
           - type: grid
             columns: 2
             square: false
@@ -784,6 +815,19 @@ views:
                 icon: mdi:ceiling-fan
                 icon_color: "{% set w = states('sensor.virtual_bedroom_1_fan_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}"
                 tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.bedroom_iron
+                layout: vertical
+                fill_container: true
+                primary: Iron
+                secondary: "{{ states('sensor.bedroom_iron_power') | float(0) | round(0) | int }} W"
+                icon: mdi:iron
+                icon_color: "{% set w = states('sensor.bedroom_iron_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 800 else 'amber' if w <= 1800 else 'red' }}"
+                tap_action:
+                  action: toggle
+                  confirmation: true
+                hold_action:
                   action: more-info
       # BEDROOM 2
       - type: grid
