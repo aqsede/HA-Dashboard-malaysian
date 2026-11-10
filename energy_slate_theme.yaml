@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Energy Slate — theme for the rebuilt Home Energy dashboard (light + dark)
+#
+# Install:
+#   1. Save as /config/themes/energy_slate.yaml
+#   2. configuration.yaml needs (once):
+#        frontend:
+#          themes: !include_dir_merge_named themes
+#   3. Developer tools → YAML → "Reload themes"
+#
+# The dashboard views already say `theme: Energy Slate`, so nothing else to set.
+# Skip this file and the dashboard still works, just with your default theme.
+#
+# The Mushroom colours below are tuned so green / amber / red / grey match the
+# hex colours used in the graphs (same traffic-light rule everywhere).
+# ─────────────────────────────────────────────────────────────────────────────
+Energy Slate:
+  # ── shape and spacing (both modes) ──────────────────────────────────────────
+  ha-card-border-radius: 18px
+  ha-card-border-width: 1px
+  ha-card-box-shadow: none
+
+  # Mushroom layout
+  mush-spacing: 10px
+  mush-icon-border-radius: 12px
+  mush-icon-size: 40px
+  mush-card-primary-font-size: 14px
+  mush-card-secondary-font-size: 12px
+  mush-card-primary-font-weight: 600
+  mush-card-secondary-font-weight: 500
+  mush-title-padding: 18px 12px 6px
+  mush-title-spacing: 4px
+  mush-title-font-size: 20px
+  mush-title-font-weight: 700
+  mush-subtitle-font-size: 13px
+  mush-chip-height: 34px
+  mush-chip-border-radius: 17px
+  mush-control-border-radius: 12px
+
+  modes:
+    dark:
+      primary-color: "#60a5fa"
+      accent-color: "#22d3ee"
+      primary-background-color: "#0d1117"
+      secondary-background-color: "#10151d"
+      card-background-color: "#161c26"
+      ha-card-background: "#161c26"
+      ha-card-border-color: "rgba(255, 255, 255, 0.07)"
+      primary-text-color: "#e6edf3"
+      secondary-text-color: "#8b98a9"
+      disabled-text-color: "#566173"
+      divider-color: "rgba(255, 255, 255, 0.08)"
+      app-header-background-color: "#10151d"
+      app-header-text-color: "#e6edf3"
+      energy-grid-consumption-color: "#60a5fa"
+      energy-grid-return-color: "#4ade80"
+      # traffic-light colours (match the graph thresholds)
+      mush-rgb-green: 74, 222, 128
+      mush-rgb-amber: 251, 191, 36
+      mush-rgb-red: 248, 113, 113
+      mush-rgb-blue: 96, 165, 250
+      mush-rgb-cyan: 34, 211, 238
+      mush-rgb-teal: 45, 212, 191
+      mush-rgb-yellow: 250, 204, 21
+      mush-rgb-disabled: 100, 110, 125
+    light:
+      primary-color: "#2563eb"
+      accent-color: "#0891b2"
+      primary-background-color: "#f1f4f9"
+      secondary-background-color: "#e8edf5"
+      card-background-color: "#ffffff"
+      ha-card-background: "#ffffff"
+      ha-card-border-color: "rgba(15, 23, 42, 0.08)"
+      primary-text-color: "#0f172a"
+      secondary-text-color: "#5b6b82"
+      disabled-text-color: "#94a3b8"
+      divider-color: "rgba(15, 23, 42, 0.10)"
+      app-header-background-color: "#ffffff"
+      app-header-text-color: "#0f172a"
+      energy-grid-consumption-color: "#2563eb"
+      energy-grid-return-color: "#16a34a"
+      # a touch darker than dark mode so they stay readable on white
+      mush-rgb-green: 22, 163, 74
+      mush-rgb-amber: 217, 119, 6
+      mush-rgb-red: 220, 38, 38
+      mush-rgb-blue: 37, 99, 235
+      mush-rgb-cyan: 8, 145, 178
+      mush-rgb-teal: 13, 148, 136
+      mush-rgb-yellow: 202, 138, 4
+      mush-rgb-disabled: 148, 163, 184
