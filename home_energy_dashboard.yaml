@@ -1,8 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Home Energy dashboard v3 — v2 reconciled against the live entity list + energy tree (2026-11-10)
-# v3 changes: fridge health card no longer depends on 5 sensors that don't exist
-#   (fridge_health_status / _health_score / _idle_drift / _idle_floor_samples_30d / _grocery_days_30d);
-#   Iron tile added (Bedroom 1) + labelled in Top consumers; Top-consumers excludes hardened.
+# Home Energy dashboard v4 — v2 + corrections, checked against the live entity list, energy tree and fridge_health.yaml
+# v4 changes: Rooms > Fridge health now follows the package's own status (ok/watch/service/learning, with its hysteresis),
+#   with a 'Today so far' tile and a 30-day daily-energy graph; Iron tile added (Bedroom 1) and labelled in Top consumers;
+#   Top consumers also excludes sensor.all_standby_power.
 # Install: Settings → Dashboards → Add dashboard → open it → ⋮ → Edit → ⋮ →
 #          Raw configuration editor → paste this whole file → Save.
 #
@@ -348,9 +348,7 @@ views:
                 # Duplicate of Midea Celest (living room)
                 - entity_id: sensor.150633094438435_realtime_power
                 # Fridge learning helpers
-                - entity_id: sensor.fridge_night_idle
-                - entity_id: sensor.fridge_night_idle_power
-                # Not a device (currently unknown; would show as a 2nd 'Fridge' if it comes alive)
+                # Not a device (state unknown today); would show as a second row if it comes alive
                 - entity_id: sensor.all_standby_power
                 - entity_id: sensor.fridge_power_1h
                 - entity_id: sensor.fridge_idle_floor
@@ -508,68 +506,100 @@ views:
                 icon_color: "{% set w = states('sensor.microwave_epower') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 400 else 'amber' if w <= 1600 else 'red' }}"
                 tap_action:
                   action: more-info
-      # FRIDGE HEALTH  gauge replaces the old duplicate section
+      # FRIDGE HEALTH  every number comes from /config/packages/fridge_health.yaml
       - type: grid
         cards:
           - type: custom:mushroom-title-card
             title: Fridge health
             subtitle: Idle floor vs your best-ever baseline
-          # Drift is computed here (24h idle floor minus best-ever floor) because
-          # sensor.fridge_health_status / _score / _idle_drift do not exist in this HA.
+          # Status follows the package's own sensor (it already applies the watch/service hysteresis)
           - type: custom:mushroom-template-card
-            entity: sensor.fridge_idle_floor_24h
+            entity: sensor.fridge_health_status
             layout: horizontal
             fill_container: true
             tap_action:
               action: more-info
             primary: |-
-              {%- if has_value('sensor.fridge_idle_floor_24h') and has_value('input_number.fridge_base_idle_w') -%}
-              {%- set d = [states('sensor.fridge_idle_floor_24h') | float(0) - states('input_number.fridge_base_idle_w') | float(0), 0] | max -%}
-              {{ 'Healthy' if d < 20 else 'Watch' if d < 32 else 'Check fridge' }}
-              {%- else -%}No data{%- endif -%}
+              {{ {'ok': 'Healthy', 'watch': 'Watch', 'service': 'Service due', 'learning': 'Learning'}.get(states('sensor.fridge_health_status'), 'No data') }}
             secondary: |-
-              {%- if has_value('sensor.fridge_idle_floor_24h') and has_value('input_number.fridge_base_idle_w') -%}
-              {%- set f = states('sensor.fridge_idle_floor_24h') | float(0) -%}
-              {%- set d = [f - states('input_number.fridge_base_idle_w') | float(0), 0] | max -%}
-              {{ f | round(0) | int }} W idle floor · +{{ d | round(1) }} W vs best{% if is_state('binary_sensor.fridge_sustained_high_load', 'on') %} · working hard{% endif %}
-              {%- else -%}Idle floor unavailable{%- endif -%}
+              {%- if states('sensor.fridge_health_status') == 'learning' -%}
+              learning · {{ states('sensor.fridge_idle_floor_samples_30d') | int(0) }}/7 days
+              {%- elif has_value('sensor.fridge_idle_drift') -%}
+              {{ '%+.1f' | format(states('sensor.fridge_idle_drift') | float(0)) }} {{ state_attr('sensor.fridge_idle_drift', 'unit_of_measurement') or '%' }} vs best
+              {%- else -%}drift unavailable{%- endif -%}
+              {%- if has_value('sensor.fridge_health_score') %} · score {{ states('sensor.fridge_health_score') | float(0) | round(0) | int }}/100{% endif %}
             icon: |-
-              {%- set d = states('sensor.fridge_idle_floor_24h') | float(0) - states('input_number.fridge_base_idle_w') | float(0) -%}
-              {{ 'mdi:fridge-alert' if has_value('sensor.fridge_idle_floor_24h') and d >= 32 else 'mdi:fridge' }}
+              {{ {'service': 'mdi:fridge-alert', 'watch': 'mdi:fridge-alert-outline', 'learning': 'mdi:fridge-outline'}.get(states('sensor.fridge_health_status'), 'mdi:fridge') }}
             icon_color: |-
-              {%- if not (has_value('sensor.fridge_idle_floor_24h') and has_value('input_number.fridge_base_idle_w')) -%}disabled
-              {%- else -%}
-              {%- set d = states('sensor.fridge_idle_floor_24h') | float(0) - states('input_number.fridge_base_idle_w') | float(0) -%}
-              {{ 'green' if d < 20 else 'amber' if d < 32 else 'red' }}
-              {%- endif -%}
-          # Core gauge cannot take a template, so segments are absolute watts:
-          # best-ever floor is ~50 W, so amber starts at best+20 (70 W) and red at best+32 (82 W).
-          # Re-tune if input_number.fridge_base_idle_w moves a lot.
+              {{ {'ok': 'green', 'watch': 'amber', 'service': 'red', 'learning': 'blue'}.get(states('sensor.fridge_health_status'), 'disabled') }}
+          # Gauge segments are fixed at the package's thresholds: watch at +20 %, service at +32 %
           - type: conditional
             conditions:
               - condition: state
-                entity: sensor.fridge_idle_floor_24h
+                entity: sensor.fridge_health_status
                 state_not:
+                  - learning
                   - unavailable
                   - unknown
             card:
               type: gauge
-              entity: sensor.fridge_idle_floor_24h
-              name: Idle floor · 24 h
-              min: 30
-              max: 100
+              entity: sensor.fridge_idle_drift
+              name: Idle drift from best
+              min: 0
+              max: 50
               needle: true
               segments:
-                - from: 30
+                - from: 0
                   color: '#43a047'
-                - from: 70
+                - from: 20
                   color: '#fb8c00'
-                - from: 82
+                - from: 32
                   color: '#e53935'
+          # Rows read left to right:  now | today  ·  typical | grocery  ·  baseline | best
           - type: grid
             columns: 2
             square: false
             cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.fridge_power_1h
+                layout: vertical
+                fill_container: true
+                primary: '{% if has_value(entity) %}{{ states(entity) | float(0) | round(0) | int }} W{% else %}—{% endif %}'
+                secondary: "{% if is_state('binary_sensor.fridge_sustained_high_load', 'on') %}Working hard · 1h avg{% else %}Now · 1h avg{% endif %}"
+                icon: mdi:flash-outline
+                icon_color: "{% if is_state('binary_sensor.fridge_sustained_high_load', 'on') %}red{% elif not has_value(entity) %}disabled{% else %}green{% endif %}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.fridge_kwh_today
+                layout: vertical
+                fill_container: true
+                primary: "{% if has_value(entity) %}{{ states(entity) | float(0) | round(2) }} {{ state_attr(entity, 'unit_of_measurement') or 'kWh' }}{% else %}—{% endif %}"
+                secondary: Today so far
+                icon: mdi:calendar-today
+                icon_color: blue
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.fridge_energy_median_30d
+                layout: vertical
+                fill_container: true
+                primary: "{% if has_value(entity) %}{{ states(entity) | float(0) | round(1) }} {{ state_attr(entity, 'unit_of_measurement') or '' }}{% else %}—{% endif %}"
+                secondary: Typical day · 30d
+                icon: mdi:calendar-month-outline
+                icon_color: blue
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.fridge_grocery_days_30d
+                layout: vertical
+                fill_container: true
+                primary: '{% if has_value(entity) %}{{ states(entity) | int(0) }}{% else %}—{% endif %}'
+                secondary: Grocery days · 30d
+                icon: mdi:cart-outline
+                icon_color: blue
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-template-card
                 entity: sensor.fridge_idle_floor_median_30d
                 layout: vertical
@@ -588,36 +618,6 @@ views:
                 secondary: Best-ever idle floor
                 icon: mdi:trophy-outline
                 icon_color: green
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.fridge_power_1h
-                layout: vertical
-                fill_container: true
-                primary: '{% if has_value(entity) %}{{ states(entity) | float(0) | round(0) | int }} W{% else %}—{% endif %}'
-                secondary: "{% if is_state('binary_sensor.fridge_sustained_high_load', 'on') %}Working hard · 1h avg{% else %}Now · 1h avg{% endif %}"
-                icon: mdi:flash-outline
-                icon_color: "{% if is_state('binary_sensor.fridge_sustained_high_load', 'on') %}red{% elif not has_value(entity) %}disabled{% else %}green{% endif %}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.fridge_energy_median_30d
-                layout: vertical
-                fill_container: true
-                primary: "{% if has_value(entity) %}{{ states(entity) | float(0) | round(1) }} {{ state_attr(entity, 'unit_of_measurement') or '' }}{% else %}—{% endif %}"
-                secondary: Typical day · 30d
-                icon: mdi:calendar-today
-                icon_color: amber
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.fridge_energy_yesterday
-                layout: vertical
-                fill_container: true
-                primary: "{% if has_value(entity) %}{{ states(entity) | float(0) | round(2) }} {{ state_attr(entity, 'unit_of_measurement') or 'kWh' }}{% else %}—{% endif %}"
-                secondary: Yesterday
-                icon: mdi:calendar-arrow-left
-                icon_color: "{% set m = states('sensor.fridge_energy_median_30d') | float(0) %}{% set y = states(entity) | float(0) %}{{ 'disabled' if not has_value(entity) else 'green' if (m == 0 or y <= m * 1.15) else 'amber' }}"
                 tap_action:
                   action: more-info
           - type: custom:mini-graph-card
@@ -641,6 +641,30 @@ views:
             line_width: 2
             font_size: 60
             smoothing: true
+            show:
+              fill: fade
+              points: false
+              legend: true
+              labels: false
+              extrema: false
+              average: false
+          - type: custom:mini-graph-card
+            name: Daily energy · 30 days
+            icon: mdi:calendar-month-outline
+            entities:
+              - entity: sensor.fridge_energy_yesterday
+                name: Daily
+                color: '#60a5fa'
+              - entity: sensor.fridge_energy_median_30d
+                name: Typical (median)
+                color: '#fbbf24'
+                show_fill: false
+            hours_to_show: 720
+            group_by: date
+            aggregate_func: avg
+            line_width: 2
+            font_size: 60
+            smoothing: false
             show:
               fill: fade
               points: false
