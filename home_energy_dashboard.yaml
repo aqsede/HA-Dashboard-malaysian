@@ -1,5 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Home Energy dashboard v4 — v2 + corrections, checked against the live entity list, energy tree and fridge_health.yaml
+# Home Energy dashboard v5 — v4 + Climate rebuilt, Rooms reordered, Usage split (checked against entity list, energy tree, fridge_health.yaml)
+# v5 changes: Climate is now room by room (aircond + fan together, fans get a toggle and watts); Rooms shows bedrooms first,
+#   then living room, kitchen, fridge; Usage puts the fixed last-24h chart in its own block above the period picker.
+# v4 changes (kept):
 # v4 changes: Rooms > Fridge health now follows the package's own status (ok/watch/service/learning, with its hysteresis),
 #   with a 'Today so far' tile and a 30-day daily-energy graph; Iron tile added (Bedroom 1) and labelled in Top consumers;
 #   Top consumers also excludes sensor.all_standby_power.
@@ -426,6 +429,253 @@ views:
     type: sections
     max_columns: 3
     sections:
+      # BEDROOM 1
+      - type: grid
+        cards:
+          - type: custom:mushroom-title-card
+            title: Bedroom 1
+            subtitle: "{{ expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_1_fan_power', 'sensor.bedroom_iron_power']) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W now"
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_1_main_light_power
+                layout: vertical
+                fill_container: true
+                primary: Main Light
+                secondary: |-
+                  {%- set n = state_attr('sensor.virtual_bedroom_1_main_light_power', 'samples') | int(0) -%}
+                  {% if not has_value('sensor.virtual_bedroom_1_main_light_power') %}learning…{% else %}{{ states('sensor.virtual_bedroom_1_main_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-light
+                icon_color: "{% set w = states('sensor.virtual_bedroom_1_main_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_1_secondary_light_power
+                layout: vertical
+                fill_container: true
+                primary: Secondary Light
+                secondary: |-
+                  {%- set n = state_attr('sensor.virtual_bedroom_1_secondary_light_power', 'samples') | int(0) -%}
+                  {% if not has_value('sensor.virtual_bedroom_1_secondary_light_power') %}learning…{% else %}{{ states('sensor.virtual_bedroom_1_secondary_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:lightbulb
+                icon_color: "{% set w = states('sensor.virtual_bedroom_1_secondary_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_1_fan_power
+                layout: vertical
+                fill_container: true
+                primary: Fan
+                secondary: |-
+                  {%- set n = state_attr('sensor.virtual_bedroom_1_fan_power', 'samples') | int(0) -%}
+                  {% if not has_value('sensor.virtual_bedroom_1_fan_power') %}learning…{% else %}{{ states('sensor.virtual_bedroom_1_fan_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-fan
+                icon_color: "{% set w = states('sensor.virtual_bedroom_1_fan_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.bedroom_iron
+                layout: vertical
+                fill_container: true
+                primary: Iron
+                secondary: "{{ states('sensor.bedroom_iron_power') | float(0) | round(0) | int }} W"
+                icon: mdi:iron
+                icon_color: "{% set w = states('sensor.bedroom_iron_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 800 else 'amber' if w <= 1800 else 'red' }}"
+                tap_action:
+                  action: toggle
+                  confirmation: true
+                hold_action:
+                  action: more-info
+      # BEDROOM 2
+      - type: grid
+        cards:
+          - type: custom:mushroom-title-card
+            title: Bedroom 2
+            subtitle: "{{ expand(['sensor.tapo_computer_plug_power_1', 'sensor.tapo_tv_plug_power_1', 'sensor.light_fan_light_fan_power']) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W now"
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: switch.tapo_computer_plug
+                layout: vertical
+                fill_container: true
+                primary: Computer
+                secondary: "{{ states('sensor.tapo_computer_plug_power_1') | float(0) | round(0) | int }} W"
+                icon: mdi:desktop-tower-monitor
+                icon_color: "{% set w = states('sensor.tapo_computer_plug_power_1') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 60 else 'amber' if w <= 400 else 'red' }}"
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.smart_wi_fi_plug
+                layout: vertical
+                fill_container: true
+                primary: Bedroom TV
+                secondary: "{{ states('sensor.tapo_tv_plug_power_1') | float(0) | round(0) | int }} W"
+                icon: mdi:television
+                icon_color: "{% set w = states('sensor.tapo_tv_plug_power_1') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 30 else 'amber' if w <= 100 else 'red' }}"
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.light_fan_light_fan_power
+                layout: vertical
+                fill_container: true
+                primary: Lights & Fan
+                secondary: "{{ states('sensor.light_fan_light_fan_power') | float(0) | round(0) | int }} W"
+                icon: mdi:ceiling-fan-light
+                icon_color: "{% set w = states('sensor.light_fan_light_fan_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 100 else 'amber' if w <= 300 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_2_light_power
+                layout: vertical
+                fill_container: true
+                primary: Light (est.)
+                secondary: |-
+                  {%- set n = state_attr('sensor.virtual_bedroom_2_light_power', 'samples') | int(0) -%}
+                  {% if not has_value('sensor.virtual_bedroom_2_light_power') %}learning…{% else %}{{ states('sensor.virtual_bedroom_2_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-light
+                icon_color: "{% set w = states('sensor.virtual_bedroom_2_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_bedroom_2_fan_power
+                layout: vertical
+                fill_container: true
+                primary: Fan (live)
+                secondary: "{% if not has_value('sensor.virtual_bedroom_2_fan_power') %}waiting for light{% else %}{{ states('sensor.virtual_bedroom_2_fan_power') | float(0) | round(0) | int }} W (live){% endif %}"
+                icon: mdi:ceiling-fan
+                icon_color: "{% set w = states('sensor.virtual_bedroom_2_fan_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}"
+                tap_action:
+                  action: more-info
+      # LIVING ROOM  metered devices plus learned lights and fan
+      - type: grid
+        cards:
+          - type: custom:mushroom-title-card
+            title: Living room
+            subtitle: "{{ (states('sensor.entertainment_power') | float(0) + (expand(['sensor.virtual_living_room_top_light_power', 'sensor.virtual_living_room_bottom_light_power', 'sensor.virtual_living_room_fan_power', 'sensor.virtual_living_room_balcony_light_power', 'sensor.virtual_living_room_hallway_light_power']) | map(attribute='state') | map('float', 0) | sum)) | round(0) | int }} W now"
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.living_room_tapo_home_server_power
+                layout: vertical
+                fill_container: true
+                primary: Server
+                secondary: "{{ states('sensor.living_room_tapo_home_server_power') | float(0) | round(0) | int }} W"
+                icon: mdi:server
+                icon_color: "{% set w = states('sensor.living_room_tapo_home_server_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 15 else 'amber' if w <= 23 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: switch.living_room_tapo_main_tv
+                layout: vertical
+                fill_container: true
+                primary: Sharp TV
+                secondary: "{{ states('sensor.living_room_tapo_main_tv_power') | float(0) | round(0) | int }} W"
+                icon: mdi:television
+                icon_color: "{% set w = states('sensor.living_room_tapo_main_tv_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 50 else 'amber' if w <= 180 else 'red' }}"
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.entertainment_power
+                layout: vertical
+                fill_container: true
+                primary: Router & Ext.
+                secondary: |-
+                  {%- set total = states('sensor.entertainment_power') | float(0) -%}
+                  {%- set w = [0, total - (states('sensor.living_room_tapo_home_server_power') | float(0) + states('sensor.living_room_tapo_main_tv_power') | float(0) + states('sensor.living_room_game_console_power') | float(0))] | max -%}
+                  {{ w | round(0) | int }} W
+                icon: mdi:router-wireless
+                icon_color: |-
+                  {%- set total = states('sensor.entertainment_power') | float(0) -%}
+                  {%- set w = [0, total - (states('sensor.living_room_tapo_home_server_power') | float(0) + states('sensor.living_room_tapo_main_tv_power') | float(0) + states('sensor.living_room_game_console_power') | float(0))] | max -%}
+                  {{ 'disabled' if w < 1 else 'green' if w <= 12 else 'amber' if w <= 25 else 'red' }}
+                tap_action:
+                  action: more-info
+                hold_action:
+                  action: none
+              - type: custom:mushroom-template-card
+                entity: switch.living_room_game_console
+                layout: vertical
+                fill_container: true
+                primary: PS5
+                secondary: "{{ states('sensor.living_room_game_console_power') | float(0) | round(0) | int }} W"
+                icon: mdi:sony-playstation
+                icon_color: "{% set w = states('sensor.living_room_game_console_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 70 else 'amber' if w <= 220 else 'red' }}"
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_top_light_power
+                layout: vertical
+                fill_container: true
+                primary: Top Light
+                secondary: |-
+                  {%- set n = state_attr('sensor.virtual_living_room_top_light_power', 'samples') | int(0) -%}
+                  {% if not has_value('sensor.virtual_living_room_top_light_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_top_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-light
+                icon_color: "{% set w = states('sensor.virtual_living_room_top_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_bottom_light_power
+                layout: vertical
+                fill_container: true
+                primary: Bottom Light
+                secondary: |-
+                  {%- set n = state_attr('sensor.virtual_living_room_bottom_light_power', 'samples') | int(0) -%}
+                  {% if not has_value('sensor.virtual_living_room_bottom_light_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_bottom_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:lightbulb
+                icon_color: "{% set w = states('sensor.virtual_living_room_bottom_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_fan_power
+                layout: vertical
+                fill_container: true
+                primary: Fan
+                secondary: |-
+                  {%- set n = state_attr('sensor.virtual_living_room_fan_power', 'samples') | int(0) -%}
+                  {% if not has_value('sensor.virtual_living_room_fan_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_fan_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:ceiling-fan
+                icon_color: "{% set w = states('sensor.virtual_living_room_fan_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_balcony_light_power
+                layout: vertical
+                fill_container: true
+                primary: Balcony Light
+                secondary: |-
+                  {%- set n = state_attr('sensor.virtual_living_room_balcony_light_power', 'samples') | int(0) -%}
+                  {% if not has_value('sensor.virtual_living_room_balcony_light_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_balcony_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:balcony
+                icon_color: "{% set w = states('sensor.virtual_living_room_balcony_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-template-card
+                entity: sensor.virtual_living_room_hallway_light_power
+                layout: vertical
+                fill_container: true
+                primary: Hallway Light
+                secondary: |-
+                  {%- set n = state_attr('sensor.virtual_living_room_hallway_light_power', 'samples') | int(0) -%}
+                  {% if not has_value('sensor.virtual_living_room_hallway_light_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_hallway_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
+                icon: mdi:wall-sconce
+                icon_color: "{% set w = states('sensor.virtual_living_room_hallway_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
+                tap_action:
+                  action: more-info
       # KITCHEN
       - type: grid
         cards:
@@ -672,253 +922,6 @@ views:
               labels: false
               extrema: false
               average: false
-      # LIVING ROOM  metered devices plus learned lights and fan
-      - type: grid
-        cards:
-          - type: custom:mushroom-title-card
-            title: Living room
-            subtitle: "{{ (states('sensor.entertainment_power') | float(0) + (expand(['sensor.virtual_living_room_top_light_power', 'sensor.virtual_living_room_bottom_light_power', 'sensor.virtual_living_room_fan_power', 'sensor.virtual_living_room_balcony_light_power', 'sensor.virtual_living_room_hallway_light_power']) | map(attribute='state') | map('float', 0) | sum)) | round(0) | int }} W now"
-          - type: grid
-            columns: 2
-            square: false
-            cards:
-              - type: custom:mushroom-template-card
-                entity: sensor.living_room_tapo_home_server_power
-                layout: vertical
-                fill_container: true
-                primary: Server
-                secondary: "{{ states('sensor.living_room_tapo_home_server_power') | float(0) | round(0) | int }} W"
-                icon: mdi:server
-                icon_color: "{% set w = states('sensor.living_room_tapo_home_server_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 15 else 'amber' if w <= 23 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: switch.living_room_tapo_main_tv
-                layout: vertical
-                fill_container: true
-                primary: Sharp TV
-                secondary: "{{ states('sensor.living_room_tapo_main_tv_power') | float(0) | round(0) | int }} W"
-                icon: mdi:television
-                icon_color: "{% set w = states('sensor.living_room_tapo_main_tv_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 50 else 'amber' if w <= 180 else 'red' }}"
-                tap_action:
-                  action: toggle
-                hold_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.entertainment_power
-                layout: vertical
-                fill_container: true
-                primary: Router & Ext.
-                secondary: |-
-                  {%- set total = states('sensor.entertainment_power') | float(0) -%}
-                  {%- set w = [0, total - (states('sensor.living_room_tapo_home_server_power') | float(0) + states('sensor.living_room_tapo_main_tv_power') | float(0) + states('sensor.living_room_game_console_power') | float(0))] | max -%}
-                  {{ w | round(0) | int }} W
-                icon: mdi:router-wireless
-                icon_color: |-
-                  {%- set total = states('sensor.entertainment_power') | float(0) -%}
-                  {%- set w = [0, total - (states('sensor.living_room_tapo_home_server_power') | float(0) + states('sensor.living_room_tapo_main_tv_power') | float(0) + states('sensor.living_room_game_console_power') | float(0))] | max -%}
-                  {{ 'disabled' if w < 1 else 'green' if w <= 12 else 'amber' if w <= 25 else 'red' }}
-                tap_action:
-                  action: more-info
-                hold_action:
-                  action: none
-              - type: custom:mushroom-template-card
-                entity: switch.living_room_game_console
-                layout: vertical
-                fill_container: true
-                primary: PS5
-                secondary: "{{ states('sensor.living_room_game_console_power') | float(0) | round(0) | int }} W"
-                icon: mdi:sony-playstation
-                icon_color: "{% set w = states('sensor.living_room_game_console_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 70 else 'amber' if w <= 220 else 'red' }}"
-                tap_action:
-                  action: toggle
-                hold_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_living_room_top_light_power
-                layout: vertical
-                fill_container: true
-                primary: Top Light
-                secondary: |-
-                  {%- set n = state_attr('sensor.virtual_living_room_top_light_power', 'samples') | int(0) -%}
-                  {% if not has_value('sensor.virtual_living_room_top_light_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_top_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
-                icon: mdi:ceiling-light
-                icon_color: "{% set w = states('sensor.virtual_living_room_top_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_living_room_bottom_light_power
-                layout: vertical
-                fill_container: true
-                primary: Bottom Light
-                secondary: |-
-                  {%- set n = state_attr('sensor.virtual_living_room_bottom_light_power', 'samples') | int(0) -%}
-                  {% if not has_value('sensor.virtual_living_room_bottom_light_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_bottom_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
-                icon: mdi:lightbulb
-                icon_color: "{% set w = states('sensor.virtual_living_room_bottom_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_living_room_fan_power
-                layout: vertical
-                fill_container: true
-                primary: Fan
-                secondary: |-
-                  {%- set n = state_attr('sensor.virtual_living_room_fan_power', 'samples') | int(0) -%}
-                  {% if not has_value('sensor.virtual_living_room_fan_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_fan_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
-                icon: mdi:ceiling-fan
-                icon_color: "{% set w = states('sensor.virtual_living_room_fan_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_living_room_balcony_light_power
-                layout: vertical
-                fill_container: true
-                primary: Balcony Light
-                secondary: |-
-                  {%- set n = state_attr('sensor.virtual_living_room_balcony_light_power', 'samples') | int(0) -%}
-                  {% if not has_value('sensor.virtual_living_room_balcony_light_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_balcony_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
-                icon: mdi:balcony
-                icon_color: "{% set w = states('sensor.virtual_living_room_balcony_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_living_room_hallway_light_power
-                layout: vertical
-                fill_container: true
-                primary: Hallway Light
-                secondary: |-
-                  {%- set n = state_attr('sensor.virtual_living_room_hallway_light_power', 'samples') | int(0) -%}
-                  {% if not has_value('sensor.virtual_living_room_hallway_light_power') %}learning…{% else %}{{ states('sensor.virtual_living_room_hallway_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
-                icon: mdi:wall-sconce
-                icon_color: "{% set w = states('sensor.virtual_living_room_hallway_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
-                tap_action:
-                  action: more-info
-      # BEDROOM 1
-      - type: grid
-        cards:
-          - type: custom:mushroom-title-card
-            title: Bedroom 1
-            subtitle: "{{ expand(['sensor.virtual_bedroom_1_main_light_power', 'sensor.virtual_bedroom_1_secondary_light_power', 'sensor.virtual_bedroom_1_fan_power', 'sensor.bedroom_iron_power']) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W now"
-          - type: grid
-            columns: 2
-            square: false
-            cards:
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_bedroom_1_main_light_power
-                layout: vertical
-                fill_container: true
-                primary: Main Light
-                secondary: |-
-                  {%- set n = state_attr('sensor.virtual_bedroom_1_main_light_power', 'samples') | int(0) -%}
-                  {% if not has_value('sensor.virtual_bedroom_1_main_light_power') %}learning…{% else %}{{ states('sensor.virtual_bedroom_1_main_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
-                icon: mdi:ceiling-light
-                icon_color: "{% set w = states('sensor.virtual_bedroom_1_main_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_bedroom_1_secondary_light_power
-                layout: vertical
-                fill_container: true
-                primary: Secondary Light
-                secondary: |-
-                  {%- set n = state_attr('sensor.virtual_bedroom_1_secondary_light_power', 'samples') | int(0) -%}
-                  {% if not has_value('sensor.virtual_bedroom_1_secondary_light_power') %}learning…{% else %}{{ states('sensor.virtual_bedroom_1_secondary_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
-                icon: mdi:lightbulb
-                icon_color: "{% set w = states('sensor.virtual_bedroom_1_secondary_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_bedroom_1_fan_power
-                layout: vertical
-                fill_container: true
-                primary: Fan
-                secondary: |-
-                  {%- set n = state_attr('sensor.virtual_bedroom_1_fan_power', 'samples') | int(0) -%}
-                  {% if not has_value('sensor.virtual_bedroom_1_fan_power') %}learning…{% else %}{{ states('sensor.virtual_bedroom_1_fan_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
-                icon: mdi:ceiling-fan
-                icon_color: "{% set w = states('sensor.virtual_bedroom_1_fan_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: switch.bedroom_iron
-                layout: vertical
-                fill_container: true
-                primary: Iron
-                secondary: "{{ states('sensor.bedroom_iron_power') | float(0) | round(0) | int }} W"
-                icon: mdi:iron
-                icon_color: "{% set w = states('sensor.bedroom_iron_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 800 else 'amber' if w <= 1800 else 'red' }}"
-                tap_action:
-                  action: toggle
-                  confirmation: true
-                hold_action:
-                  action: more-info
-      # BEDROOM 2
-      - type: grid
-        cards:
-          - type: custom:mushroom-title-card
-            title: Bedroom 2
-            subtitle: "{{ expand(['sensor.tapo_computer_plug_power_1', 'sensor.tapo_tv_plug_power_1', 'sensor.light_fan_light_fan_power']) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W now"
-          - type: grid
-            columns: 2
-            square: false
-            cards:
-              - type: custom:mushroom-template-card
-                entity: switch.tapo_computer_plug
-                layout: vertical
-                fill_container: true
-                primary: Computer
-                secondary: "{{ states('sensor.tapo_computer_plug_power_1') | float(0) | round(0) | int }} W"
-                icon: mdi:desktop-tower-monitor
-                icon_color: "{% set w = states('sensor.tapo_computer_plug_power_1') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 60 else 'amber' if w <= 400 else 'red' }}"
-                tap_action:
-                  action: toggle
-                hold_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: switch.smart_wi_fi_plug
-                layout: vertical
-                fill_container: true
-                primary: Bedroom TV
-                secondary: "{{ states('sensor.tapo_tv_plug_power_1') | float(0) | round(0) | int }} W"
-                icon: mdi:television
-                icon_color: "{% set w = states('sensor.tapo_tv_plug_power_1') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 30 else 'amber' if w <= 100 else 'red' }}"
-                tap_action:
-                  action: toggle
-                hold_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.light_fan_light_fan_power
-                layout: vertical
-                fill_container: true
-                primary: Lights & Fan
-                secondary: "{{ states('sensor.light_fan_light_fan_power') | float(0) | round(0) | int }} W"
-                icon: mdi:ceiling-fan-light
-                icon_color: "{% set w = states('sensor.light_fan_light_fan_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 100 else 'amber' if w <= 300 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_bedroom_2_light_power
-                layout: vertical
-                fill_container: true
-                primary: Light (est.)
-                secondary: |-
-                  {%- set n = state_attr('sensor.virtual_bedroom_2_light_power', 'samples') | int(0) -%}
-                  {% if not has_value('sensor.virtual_bedroom_2_light_power') %}learning…{% else %}{{ states('sensor.virtual_bedroom_2_light_power') | float(0) | round(0) | int }} W (est.){% if n < 5 %} · learning {{ n }}/5{% endif %}{% endif %}
-                icon: mdi:ceiling-light
-                icon_color: "{% set w = states('sensor.virtual_bedroom_2_light_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 25 else 'amber' if w <= 60 else 'red' }}"
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-template-card
-                entity: sensor.virtual_bedroom_2_fan_power
-                layout: vertical
-                fill_container: true
-                primary: Fan (live)
-                secondary: "{% if not has_value('sensor.virtual_bedroom_2_fan_power') %}waiting for light{% else %}{{ states('sensor.virtual_bedroom_2_fan_power') | float(0) | round(0) | int }} W (live){% endif %}"
-                icon: mdi:ceiling-fan
-                icon_color: "{% set w = states('sensor.virtual_bedroom_2_fan_power') | float(0) %}{{ 'disabled' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}"
-                tap_action:
-                  action: more-info
       # YARD AND ESTIMATED
       - type: grid
         cards:
@@ -1042,21 +1045,21 @@ views:
     type: sections
     max_columns: 2
     sections:
-      # AIRCOND OVERVIEW  biggest load in the house
+      # COOLING NOW  aircond + fans, biggest load in the house
       - type: grid
         column_span: 2
         cards:
           - type: heading
-            heading: Aircond
+            heading: Cooling
             heading_style: title
             icon: mdi:snowflake
           - type: custom:mushroom-template-card
             layout: horizontal
             fill_container: true
-            primary: "{{ expand(['sensor.midea_all_easy_pro_power', 'sensor.midea_celest_power', 'sensor.hisense_tugs_power', 'sensor.celest_bedroom_3_power']) | map(attribute='state') | map('float', 0) | sum | round(0) | int }} W"
-            secondary: "Aircond total · {{ expand(['climate.151732606038013_climate', 'climate.150633094438435_climate', 'climate.ai10tugs', 'climate.150633095125593_climate']) | rejectattr('state', 'in', ['off', 'unavailable', 'unknown']) | list | length }} running"
+            primary: "{% set ac = expand(['sensor.midea_all_easy_pro_power', 'sensor.midea_celest_power', 'sensor.hisense_tugs_power', 'sensor.celest_bedroom_3_power']) | map(attribute='state') | map('float', 0) | sum %}{% set fw = expand(['sensor.virtual_bedroom_1_fan_power', 'sensor.virtual_bedroom_2_fan_power', 'sensor.virtual_living_room_fan_power']) | map(attribute='state') | map('float', 0) | sum %}{{ (ac + fw) | round(0) | int }} W"
+            secondary: "{% set ac = expand(['sensor.midea_all_easy_pro_power', 'sensor.midea_celest_power', 'sensor.hisense_tugs_power', 'sensor.celest_bedroom_3_power']) | map(attribute='state') | map('float', 0) | sum %}{% set fw = expand(['sensor.virtual_bedroom_1_fan_power', 'sensor.virtual_bedroom_2_fan_power', 'sensor.virtual_living_room_fan_power']) | map(attribute='state') | map('float', 0) | sum %}{% set na = expand(['climate.151732606038013_climate', 'climate.150633094438435_climate', 'climate.ai10tugs', 'climate.150633095125593_climate']) | rejectattr('state', 'in', ['off', 'unavailable', 'unknown']) | list | length %}{% set nf = expand(['fan.bedroom_wall_switch_switch_1', 'fan.bedroom_2_fan', 'fan.living_room_wall_switch_switch_2']) | selectattr('state', 'eq', 'on') | list | length %}{{ ac | round(0) | int }} W aircond ({{ na }} on) · {{ fw | round(0) | int }} W fans ({{ nf }} on)"
             icon: mdi:snowflake
-            icon_color: "{% set w = expand(['sensor.midea_all_easy_pro_power', 'sensor.midea_celest_power', 'sensor.hisense_tugs_power', 'sensor.celest_bedroom_3_power']) | map(attribute='state') | map('float', 0) | sum %}{{ 'disabled' if w < 1 else 'green' if w <= 1000 else 'amber' if w <= 3000 else 'red' }}"
+            icon_color: "{% set w = expand(['sensor.midea_all_easy_pro_power', 'sensor.midea_celest_power', 'sensor.hisense_tugs_power', 'sensor.celest_bedroom_3_power', 'sensor.virtual_bedroom_1_fan_power', 'sensor.virtual_bedroom_2_fan_power', 'sensor.virtual_living_room_fan_power']) | map(attribute='state') | map('float', 0) | sum %}{{ 'disabled' if w < 1 else 'green' if w <= 1000 else 'amber' if w <= 3000 else 'red' }}"
             tap_action:
               action: none
             grid_options:
@@ -1090,13 +1093,24 @@ views:
                 color: '#1d4ed8'
             grid_options:
               columns: full
-      # ALL EASY PRO
+      # MASTER BEDROOM  All Easy Pro 1HP + fan
       - type: grid
         cards:
           - type: heading
-            heading: Master bedroom · All Easy Pro 1HP
+            heading: Master bedroom
             heading_style: title
-            icon: mdi:air-conditioner
+            icon: mdi:bed
+            badges:
+              - type: entity
+                entity: sensor.midea_all_easy_pro_power
+                show_state: true
+                show_icon: true
+                icon: mdi:air-conditioner
+              - type: entity
+                entity: sensor.virtual_bedroom_1_fan_power
+                show_state: true
+                show_icon: true
+                icon: mdi:ceiling-fan
           - type: vertical-stack
             cards:
               - type: custom:mini-graph-card
@@ -1134,7 +1148,7 @@ views:
                 card:
                   type: tile
                   entity: climate.151732606038013_climate
-                  name: All Easy Pro
+                  name: All Easy Pro 1HP
                   vertical: false
                   state_content:
                     - state
@@ -1149,72 +1163,41 @@ views:
                         - auto
                         - 'off'
                     - type: target-temperature
-      # CELEST 2HP
+              - type: custom:mushroom-template-card
+                entity: fan.bedroom_wall_switch_switch_1
+                layout: horizontal
+                fill_container: true
+                primary: Fan
+                secondary: |-
+                  {%- set w = states('sensor.virtual_bedroom_1_fan_power') | float(0) -%}
+                  {%- set p = state_attr(entity, 'percentage') -%}
+                  {%- if is_state(entity, 'on') -%}On{{ ' · ' ~ (p | int(0)) ~ '%' if p is number and p > 0 else '' }} · {{ w | round(0) | int }} W (est.){%- else -%}Off{%- endif -%}
+                icon: "{{ 'mdi:ceiling-fan' if is_state(entity, 'on') else 'mdi:fan-off' }}"
+                icon_color: |-
+                  {%- set w = states('sensor.virtual_bedroom_1_fan_power') | float(0) -%}
+                  {{ 'disabled' if not is_state(entity, 'on') else 'cyan' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+      # BEDROOM 2  Hisense + fan
       - type: grid
         cards:
           - type: heading
-            heading: Living room · Celest 2HP
+            heading: Bedroom 2
             heading_style: title
-            icon: mdi:air-conditioner
-          - type: vertical-stack
-            cards:
-              - type: custom:mini-graph-card
-                name: Power · 12 h
-                icon: mdi:flash
-                entities:
-                  - entity: sensor.midea_celest_power
-                hours_to_show: 12
-                points_per_hour: 4
-                line_width: 2
-                font_size: 60
-                smoothing: true
-                color_thresholds:
-                  - value: 0
-                    color: '#4ade80'
-                  - value: 700
-                    color: '#fbbf24'
-                  - value: 1900
-                    color: '#f87171'
-                show:
-                  fill: fade
-                  points: false
-                  legend: false
-                  labels: false
-              - type: conditional
-                conditions:
-                  - condition: state
-                    entity: climate.150633094438435_climate
-                    state:
-                      - 'off'
-                      - cool
-                      - dry
-                      - fan_only
-                      - auto
-                card:
-                  type: tile
-                  entity: climate.150633094438435_climate
-                  name: Celest 2HP
-                  vertical: false
-                  state_content:
-                    - state
-                    - current_temperature
-                  features_position: bottom
-                  features:
-                    - type: climate-hvac-modes
-                      hvac_modes:
-                        - cool
-                        - dry
-                        - fan_only
-                        - auto
-                        - 'off'
-                    - type: target-temperature
-      # HISENSE
-      - type: grid
-        cards:
-          - type: heading
-            heading: Bedroom 2 · Hisense
-            heading_style: title
-            icon: mdi:air-conditioner
+            icon: mdi:bed-outline
+            badges:
+              - type: entity
+                entity: sensor.hisense_tugs_power
+                show_state: true
+                show_icon: true
+                icon: mdi:air-conditioner
+              - type: entity
+                entity: sensor.virtual_bedroom_2_fan_power
+                show_state: true
+                show_icon: true
+                icon: mdi:ceiling-fan
           - type: vertical-stack
             cards:
               - type: custom:mini-graph-card
@@ -1284,13 +1267,123 @@ views:
                     icon_color: "{{ 'blue' if is_state(entity, 'on') else 'disabled' }}"
                     tap_action:
                       action: toggle
-      # CELEST 1HP
+              - type: custom:mushroom-template-card
+                entity: fan.bedroom_2_fan
+                layout: horizontal
+                fill_container: true
+                primary: Fan
+                secondary: |-
+                  {%- set w = states('sensor.virtual_bedroom_2_fan_power') | float(0) -%}
+                  {%- set p = state_attr(entity, 'percentage') -%}
+                  {%- if is_state(entity, 'on') -%}On{{ ' · ' ~ (p | int(0)) ~ '%' if p is number and p > 0 else '' }} · {{ w | round(0) | int }} W (live){%- else -%}Off{%- endif -%}
+                icon: "{{ 'mdi:ceiling-fan' if is_state(entity, 'on') else 'mdi:fan-off' }}"
+                icon_color: |-
+                  {%- set w = states('sensor.virtual_bedroom_2_fan_power') | float(0) -%}
+                  {{ 'disabled' if not is_state(entity, 'on') else 'cyan' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+      # LIVING ROOM  Celest 2HP + fan
       - type: grid
         cards:
           - type: heading
-            heading: Bedroom 3 · Celest 1HP
+            heading: Living room
             heading_style: title
-            icon: mdi:air-conditioner
+            icon: mdi:sofa
+            badges:
+              - type: entity
+                entity: sensor.midea_celest_power
+                show_state: true
+                show_icon: true
+                icon: mdi:air-conditioner
+              - type: entity
+                entity: sensor.virtual_living_room_fan_power
+                show_state: true
+                show_icon: true
+                icon: mdi:ceiling-fan
+          - type: vertical-stack
+            cards:
+              - type: custom:mini-graph-card
+                name: Power · 12 h
+                icon: mdi:flash
+                entities:
+                  - entity: sensor.midea_celest_power
+                hours_to_show: 12
+                points_per_hour: 4
+                line_width: 2
+                font_size: 60
+                smoothing: true
+                color_thresholds:
+                  - value: 0
+                    color: '#4ade80'
+                  - value: 700
+                    color: '#fbbf24'
+                  - value: 1900
+                    color: '#f87171'
+                show:
+                  fill: fade
+                  points: false
+                  legend: false
+                  labels: false
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.150633094438435_climate
+                    state:
+                      - 'off'
+                      - cool
+                      - dry
+                      - fan_only
+                      - auto
+                card:
+                  type: tile
+                  entity: climate.150633094438435_climate
+                  name: Celest 2HP
+                  vertical: false
+                  state_content:
+                    - state
+                    - current_temperature
+                  features_position: bottom
+                  features:
+                    - type: climate-hvac-modes
+                      hvac_modes:
+                        - cool
+                        - dry
+                        - fan_only
+                        - auto
+                        - 'off'
+                    - type: target-temperature
+              - type: custom:mushroom-template-card
+                entity: fan.living_room_wall_switch_switch_2
+                layout: horizontal
+                fill_container: true
+                primary: Fan
+                secondary: |-
+                  {%- set w = states('sensor.virtual_living_room_fan_power') | float(0) -%}
+                  {%- set p = state_attr(entity, 'percentage') -%}
+                  {%- if is_state(entity, 'on') -%}On{{ ' · ' ~ (p | int(0)) ~ '%' if p is number and p > 0 else '' }} · {{ w | round(0) | int }} W (est.){%- else -%}Off{%- endif -%}
+                icon: "{{ 'mdi:ceiling-fan' if is_state(entity, 'on') else 'mdi:fan-off' }}"
+                icon_color: |-
+                  {%- set w = states('sensor.virtual_living_room_fan_power') | float(0) -%}
+                  {{ 'disabled' if not is_state(entity, 'on') else 'cyan' if w < 1 else 'green' if w <= 40 else 'amber' if w <= 80 else 'red' }}
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+      # BEDROOM 3  Celest 1HP (no fan)
+      - type: grid
+        cards:
+          - type: heading
+            heading: Bedroom 3
+            heading_style: title
+            icon: mdi:bed-outline
+            badges:
+              - type: entity
+                entity: sensor.celest_bedroom_3_power
+                show_state: true
+                show_icon: true
+                icon: mdi:air-conditioner
           - type: vertical-stack
             cards:
               - type: custom:mini-graph-card
@@ -1925,21 +2018,17 @@ views:
     max_columns: 2
     dense_section_placement: true
     sections:
-      # Shared date range for all native Energy cards below
+      # LAST 24 HOURS  fixed window (watts). The period picker below does not change this.
       - type: grid
         column_span: 2
         cards:
-          - type: energy-date-selection
-            grid_options:
-              columns: full
-      # Live stacked picture of the last 24 h
-      - type: grid
-        column_span: 2
-        cards:
+          - type: custom:mushroom-title-card
+            title: Last 24 hours
+            subtitle: Watts per device. Fixed window, not affected by the period picker below.
           - type: custom:apexcharts-card
             header:
               show: true
-              title: Where the watts went · 24 h
+              title: Where the watts went
               show_states: false
             graph_span: 24h
             chart_type: line
@@ -2016,6 +2105,16 @@ views:
               - entity: input_number.lights_watt_baseline
                 name: Lights & fans (est.)
                 color: '#f472b6'
+            grid_options:
+              columns: full
+      # ENERGY BY PERIOD  the picker owns every native Energy card from here down
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:mushroom-title-card
+            title: Energy by period
+            subtitle: Pick a range here. Every card below follows it.
+          - type: energy-date-selection
             grid_options:
               columns: full
       - type: grid
