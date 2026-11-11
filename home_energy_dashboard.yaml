@@ -1,5 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Home Energy dashboard v5 — v4 + Climate rebuilt, Rooms reordered, Usage split (checked against entity list, energy tree, fridge_health.yaml)
+# Home Energy dashboard v6 — v5 + Climate room cards: fan sits under the graph so it lines up across rooms; AC controls only
+#   when the unit is reachable, otherwise an 'Unavailable · no power or offline' card (Hisense Quiet/Fast cool chips follow the same rule)
+# v5 changes (kept): Climate rebuilt room by room, Rooms reordered, Usage split (checked against entity list, energy tree, fridge_health.yaml)
 # v5 changes: Climate is now room by room (aircond + fan together, fans get a toggle and watts); Rooms shows bedrooms first,
 #   then living room, kitchen, fridge; Usage puts the fixed last-24h chart in its own block above the period picker.
 # v4 changes (kept):
@@ -1135,34 +1137,6 @@ views:
                   points: false
                   legend: false
                   labels: false
-              - type: conditional
-                conditions:
-                  - condition: state
-                    entity: climate.151732606038013_climate
-                    state:
-                      - 'off'
-                      - cool
-                      - dry
-                      - fan_only
-                      - auto
-                card:
-                  type: tile
-                  entity: climate.151732606038013_climate
-                  name: All Easy Pro 1HP
-                  vertical: false
-                  state_content:
-                    - state
-                    - current_temperature
-                  features_position: bottom
-                  features:
-                    - type: climate-hvac-modes
-                      hvac_modes:
-                        - cool
-                        - dry
-                        - fan_only
-                        - auto
-                        - 'off'
-                    - type: target-temperature
               - type: custom:mushroom-template-card
                 entity: fan.bedroom_wall_switch_switch_1
                 layout: horizontal
@@ -1171,7 +1145,7 @@ views:
                 secondary: |-
                   {%- set w = states('sensor.virtual_bedroom_1_fan_power') | float(0) -%}
                   {%- set p = state_attr(entity, 'percentage') -%}
-                  {%- if is_state(entity, 'on') -%}On{{ ' · ' ~ (p | int(0)) ~ '%' if p is number and p > 0 else '' }} · {{ w | round(0) | int }} W (est.){%- else -%}Off{%- endif -%}
+                  {%- if is_state(entity, 'on') -%}On{{ ' · ' ~ (p | int(0)) ~ '%' if p is number and p > 0 else '' }} · {{ w | round(0) | int }} W (est.){%- elif is_state(entity, 'unavailable') -%}Unavailable{%- else -%}Off{%- endif -%}
                 icon: "{{ 'mdi:ceiling-fan' if is_state(entity, 'on') else 'mdi:fan-off' }}"
                 icon_color: |-
                   {%- set w = states('sensor.virtual_bedroom_1_fan_power') | float(0) -%}
@@ -1180,6 +1154,53 @@ views:
                   action: toggle
                 hold_action:
                   action: more-info
+              # Aircond controls: only when the unit is reachable (tile, plus the Hisense chips)
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.151732606038013_climate
+                    state_not:
+                      - unavailable
+                      - unknown
+                card:
+                  type: vertical-stack
+                  cards:
+                    - type: tile
+                      entity: climate.151732606038013_climate
+                      name: All Easy Pro 1HP
+                      vertical: false
+                      state_content:
+                        - state
+                        - current_temperature
+                      features_position: bottom
+                      features:
+                        - type: climate-hvac-modes
+                          hvac_modes:
+                            - cool
+                            - dry
+                            - fan_only
+                            - auto
+                            - 'off'
+                        - type: target-temperature
+              # Unit has no power / is offline: say so instead of showing nothing
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.151732606038013_climate
+                    state:
+                      - unavailable
+                      - unknown
+                card:
+                  type: custom:mushroom-template-card
+                  entity: climate.151732606038013_climate
+                  layout: horizontal
+                  fill_container: true
+                  primary: All Easy Pro 1HP
+                  secondary: Unavailable · no power or offline
+                  icon: mdi:air-conditioner
+                  icon_color: disabled
+                  tap_action:
+                    action: more-info
       # BEDROOM 2  Hisense + fan
       - type: grid
         cards:
@@ -1222,51 +1243,6 @@ views:
                   points: false
                   legend: false
                   labels: false
-              - type: conditional
-                conditions:
-                  - condition: state
-                    entity: climate.ai10tugs
-                    state:
-                      - 'off'
-                      - cool
-                      - dry
-                      - fan_only
-                      - auto
-                card:
-                  type: tile
-                  entity: climate.ai10tugs
-                  name: Hisense
-                  vertical: false
-                  state_content:
-                    - state
-                    - current_temperature
-                  features_position: bottom
-                  features:
-                    - type: climate-hvac-modes
-                      hvac_modes:
-                        - cool
-                        - dry
-                        - fan_only
-                        - auto
-                        - 'off'
-                    - type: target-temperature
-              - type: custom:mushroom-chips-card
-                alignment: center
-                chips:
-                  - type: template
-                    entity: switch.ai10tugs_quiet_mode
-                    icon: mdi:volume-off
-                    content: Quiet
-                    icon_color: "{{ 'blue' if is_state(entity, 'on') else 'disabled' }}"
-                    tap_action:
-                      action: toggle
-                  - type: template
-                    entity: switch.ai10tugs_fast_heating_cooling
-                    icon: mdi:rocket-launch
-                    content: Fast cool
-                    icon_color: "{{ 'blue' if is_state(entity, 'on') else 'disabled' }}"
-                    tap_action:
-                      action: toggle
               - type: custom:mushroom-template-card
                 entity: fan.bedroom_2_fan
                 layout: horizontal
@@ -1275,7 +1251,7 @@ views:
                 secondary: |-
                   {%- set w = states('sensor.virtual_bedroom_2_fan_power') | float(0) -%}
                   {%- set p = state_attr(entity, 'percentage') -%}
-                  {%- if is_state(entity, 'on') -%}On{{ ' · ' ~ (p | int(0)) ~ '%' if p is number and p > 0 else '' }} · {{ w | round(0) | int }} W (live){%- else -%}Off{%- endif -%}
+                  {%- if is_state(entity, 'on') -%}On{{ ' · ' ~ (p | int(0)) ~ '%' if p is number and p > 0 else '' }} · {{ w | round(0) | int }} W (live){%- elif is_state(entity, 'unavailable') -%}Unavailable{%- else -%}Off{%- endif -%}
                 icon: "{{ 'mdi:ceiling-fan' if is_state(entity, 'on') else 'mdi:fan-off' }}"
                 icon_color: |-
                   {%- set w = states('sensor.virtual_bedroom_2_fan_power') | float(0) -%}
@@ -1284,6 +1260,70 @@ views:
                   action: toggle
                 hold_action:
                   action: more-info
+              # Aircond controls: only when the unit is reachable (tile, plus the Hisense chips)
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.ai10tugs
+                    state_not:
+                      - unavailable
+                      - unknown
+                card:
+                  type: vertical-stack
+                  cards:
+                    - type: tile
+                      entity: climate.ai10tugs
+                      name: Hisense
+                      vertical: false
+                      state_content:
+                        - state
+                        - current_temperature
+                      features_position: bottom
+                      features:
+                        - type: climate-hvac-modes
+                          hvac_modes:
+                            - cool
+                            - dry
+                            - fan_only
+                            - auto
+                            - 'off'
+                        - type: target-temperature
+                    - type: custom:mushroom-chips-card
+                      alignment: center
+                      chips:
+                        - type: template
+                          entity: switch.ai10tugs_quiet_mode
+                          icon: mdi:volume-off
+                          content: Quiet
+                          icon_color: "{{ 'blue' if is_state(entity, 'on') else 'disabled' }}"
+                          tap_action:
+                            action: toggle
+                        - type: template
+                          entity: switch.ai10tugs_fast_heating_cooling
+                          icon: mdi:rocket-launch
+                          content: Fast cool
+                          icon_color: "{{ 'blue' if is_state(entity, 'on') else 'disabled' }}"
+                          tap_action:
+                            action: toggle
+              # Unit has no power / is offline: say so instead of showing nothing
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.ai10tugs
+                    state:
+                      - unavailable
+                      - unknown
+                card:
+                  type: custom:mushroom-template-card
+                  entity: climate.ai10tugs
+                  layout: horizontal
+                  fill_container: true
+                  primary: Hisense
+                  secondary: Unavailable · no power or offline
+                  icon: mdi:air-conditioner
+                  icon_color: disabled
+                  tap_action:
+                    action: more-info
       # LIVING ROOM  Celest 2HP + fan
       - type: grid
         cards:
@@ -1326,34 +1366,6 @@ views:
                   points: false
                   legend: false
                   labels: false
-              - type: conditional
-                conditions:
-                  - condition: state
-                    entity: climate.150633094438435_climate
-                    state:
-                      - 'off'
-                      - cool
-                      - dry
-                      - fan_only
-                      - auto
-                card:
-                  type: tile
-                  entity: climate.150633094438435_climate
-                  name: Celest 2HP
-                  vertical: false
-                  state_content:
-                    - state
-                    - current_temperature
-                  features_position: bottom
-                  features:
-                    - type: climate-hvac-modes
-                      hvac_modes:
-                        - cool
-                        - dry
-                        - fan_only
-                        - auto
-                        - 'off'
-                    - type: target-temperature
               - type: custom:mushroom-template-card
                 entity: fan.living_room_wall_switch_switch_2
                 layout: horizontal
@@ -1362,7 +1374,7 @@ views:
                 secondary: |-
                   {%- set w = states('sensor.virtual_living_room_fan_power') | float(0) -%}
                   {%- set p = state_attr(entity, 'percentage') -%}
-                  {%- if is_state(entity, 'on') -%}On{{ ' · ' ~ (p | int(0)) ~ '%' if p is number and p > 0 else '' }} · {{ w | round(0) | int }} W (est.){%- else -%}Off{%- endif -%}
+                  {%- if is_state(entity, 'on') -%}On{{ ' · ' ~ (p | int(0)) ~ '%' if p is number and p > 0 else '' }} · {{ w | round(0) | int }} W (est.){%- elif is_state(entity, 'unavailable') -%}Unavailable{%- else -%}Off{%- endif -%}
                 icon: "{{ 'mdi:ceiling-fan' if is_state(entity, 'on') else 'mdi:fan-off' }}"
                 icon_color: |-
                   {%- set w = states('sensor.virtual_living_room_fan_power') | float(0) -%}
@@ -1371,6 +1383,53 @@ views:
                   action: toggle
                 hold_action:
                   action: more-info
+              # Aircond controls: only when the unit is reachable (tile, plus the Hisense chips)
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.150633094438435_climate
+                    state_not:
+                      - unavailable
+                      - unknown
+                card:
+                  type: vertical-stack
+                  cards:
+                    - type: tile
+                      entity: climate.150633094438435_climate
+                      name: Celest 2HP
+                      vertical: false
+                      state_content:
+                        - state
+                        - current_temperature
+                      features_position: bottom
+                      features:
+                        - type: climate-hvac-modes
+                          hvac_modes:
+                            - cool
+                            - dry
+                            - fan_only
+                            - auto
+                            - 'off'
+                        - type: target-temperature
+              # Unit has no power / is offline: say so instead of showing nothing
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.150633094438435_climate
+                    state:
+                      - unavailable
+                      - unknown
+                card:
+                  type: custom:mushroom-template-card
+                  entity: climate.150633094438435_climate
+                  layout: horizontal
+                  fill_container: true
+                  primary: Celest 2HP
+                  secondary: Unavailable · no power or offline
+                  icon: mdi:air-conditioner
+                  icon_color: disabled
+                  tap_action:
+                    action: more-info
       # BEDROOM 3  Celest 1HP (no fan)
       - type: grid
         cards:
@@ -1408,34 +1467,53 @@ views:
                   points: false
                   legend: false
                   labels: false
+              # Aircond controls: only when the unit is reachable (tile, plus the Hisense chips)
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: climate.150633095125593_climate
+                    state_not:
+                      - unavailable
+                      - unknown
+                card:
+                  type: vertical-stack
+                  cards:
+                    - type: tile
+                      entity: climate.150633095125593_climate
+                      name: Celest 1HP
+                      vertical: false
+                      state_content:
+                        - state
+                        - current_temperature
+                      features_position: bottom
+                      features:
+                        - type: climate-hvac-modes
+                          hvac_modes:
+                            - cool
+                            - dry
+                            - fan_only
+                            - auto
+                            - 'off'
+                        - type: target-temperature
+              # Unit has no power / is offline: say so instead of showing nothing
               - type: conditional
                 conditions:
                   - condition: state
                     entity: climate.150633095125593_climate
                     state:
-                      - 'off'
-                      - cool
-                      - dry
-                      - fan_only
-                      - auto
+                      - unavailable
+                      - unknown
                 card:
-                  type: tile
+                  type: custom:mushroom-template-card
                   entity: climate.150633095125593_climate
-                  name: Celest 1HP
-                  vertical: false
-                  state_content:
-                    - state
-                    - current_temperature
-                  features_position: bottom
-                  features:
-                    - type: climate-hvac-modes
-                      hvac_modes:
-                        - cool
-                        - dry
-                        - fan_only
-                        - auto
-                        - 'off'
-                    - type: target-temperature
+                  layout: horizontal
+                  fill_container: true
+                  primary: Celest 1HP
+                  secondary: Unavailable · no power or offline
+                  icon: mdi:air-conditioner
+                  icon_color: disabled
+                  tap_action:
+                    action: more-info
   - title: Bill
     path: bill
     icon: mdi:receipt-text-outline
